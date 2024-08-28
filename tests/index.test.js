@@ -2,7 +2,7 @@ import expect from "expect";
 import React from "react";
 import { render, unmountComponentAtNode } from "react-dom";
 
-import CanvasDraw from "../type-build/index";
+import CanvasDraw from "../src/index";
 
 describe("DrawCanvas", () => {
   let node;

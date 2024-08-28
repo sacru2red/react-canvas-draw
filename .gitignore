@@ -6,5 +6,5 @@
 /umd
 npm-debug.log*
 .vscode/
-type-build
+src
 type
