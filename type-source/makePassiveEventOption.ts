@@ -8,12 +8,14 @@ try {
       return false;
     }
   };
+  // @ts-ignore
   window.addEventListener("test", options, options);
+  // @ts-ignore
   window.removeEventListener("test", options, options);
 } catch(e) {
   passiveSupported = false;
 }
 
-export default function makePassiveEventOption(passive) {
+export default function makePassiveEventOption(passive?: boolean) {
   return passiveSupported ? { passive } : passive;
 }

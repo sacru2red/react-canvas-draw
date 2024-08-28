@@ -1,3 +1,5 @@
+import { Extents, Size } from "./types";
+
 /**
  * @type {ViewPoint}
  */
@@ -21,7 +23,7 @@ const NULL_BOUNDS = Object.freeze({
  */
 export const IDENTITY = Object.freeze({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
 
-function valueOrDefault(value, defaultValue) {
+function valueOrDefault(value: any, defaultValue: any) {
   if (value === null || (typeof value) === "undefined") {
     return defaultValue;
   } else {
@@ -51,7 +53,7 @@ export default class CoordinateSystem {
    * @param {Extents} parameters.scaleExtents the minimum and maximum allowable scale factor.
    * @param {Sizee} parameters.documentSize the width and height of the document, in client space.
    */
-  constructor({ scaleExtents, documentSize }) {
+  constructor({ scaleExtents, documentSize }: { scaleExtents: Extents, documentSize: Size }) {
     this._scaleExtents = scaleExtents;
     this._documentSize = documentSize;
   }
@@ -77,7 +79,7 @@ export default class CoordinateSystem {
    * @type {Canvas}
    * @private
    */
-  _canvas = null;
+  _canvas: HTMLCanvasElement | null = null;
 
   /**
    * @typedef View
@@ -101,7 +103,7 @@ export default class CoordinateSystem {
     * @type {ViewListener[]}
     * @private
     */
-   _viewChangeListeners = new Set();
+   _viewChangeListeners = new Set<Function>();
 
   /**
    * @returns {Canvas} the canvas currently associated with this instance.
@@ -130,7 +132,7 @@ export default class CoordinateSystem {
    * Sets the zoom factor (clamped by the scale extents) and updates the view.
    * @param {number} the new zoom factor
    */
-  setScale = (scale) => {
+  setScale = (scale: number) => {
     this.setView({ scale });
   };
 
@@ -146,7 +148,7 @@ export default class CoordinateSystem {
    * updates the view.
    * @param {number} x the new offset
    */
-  set x(x) {
+  set x(x: number) {
     this.setView({ x });
   }
 
@@ -287,7 +289,7 @@ export default class CoordinateSystem {
    * @param {View} view the view constraints to clamp.
    * @returns {View} a new view object representing the constrained input.
    */
-  clampView = ({ scale, x, y }) => {
+  clampView = ({ scale, x, y }: { scale: number, x: number, y: number }) => {
     const { min, max } = this.scaleExtents;
     const { width, height } = this.documentSize;
     const { left, top, right, bottom } = this.canvasRect || NULL_BOUNDS;
@@ -323,7 +325,7 @@ export default class CoordinateSystem {
    * @return {View}
    *    a copy of the view state after having been constrained and applied.
    */
-  setView = (view) => {
+  setView = (view?: object) => {
     const newView = this.clampView({ ...this._view, ...(view || {}) });
     const { scale, x, y } = this._view;
 
@@ -345,7 +347,7 @@ export default class CoordinateSystem {
    *
    * @returns {View} the newly computed view.
    */
-  scaleAtClientPoint = (deltaScale, clientPoint) => {
+  scaleAtClientPoint = (deltaScale: number, clientPoint: { clientX: number, clientY: number }) => {
     const viewPt = this.clientPointToViewPoint(clientPoint);
     const newView = this.clampView({ ...this._view, scale: this._view.scale + deltaScale });
     const clientPtPostScale = this.viewPointToClientPoint(viewPt, newView);
@@ -379,7 +381,7 @@ export default class CoordinateSystem {
    * to view space. If there is no canvas set, a top-left corner of (0, 0) is
    * assumed.
    */
-  clientPointToViewPoint = ({ clientX, clientY }, view = this._view) => {
+  clientPointToViewPoint = ({ clientX, clientY }: { clientX: number, clientY: number }, view = this._view) => {
     const { left, top } = this.canvasRect || NULL_BOUNDS;
     const relativeClientX = clientX - left;
     const relativeClientY = clientY - top;
@@ -419,7 +421,7 @@ export default class CoordinateSystem {
     * client space. If there is no canvas set, a top-left corner of (0, 0) is
     * assumed.
     */
-  viewPointToClientPoint = ({ x, y }, view = this._view) => {
+  viewPointToClientPoint = ({ x, y }: { x: number, y: number }, view = this._view) => {
     const { left, top } = this.canvasRect || NULL_BOUNDS;
     const relativeX = x * view.scale + view.x;
     const relativeY = y * view.scale + view.y;
@@ -434,7 +436,7 @@ export default class CoordinateSystem {
    * transform changes.
    * @param {ViewListener} listener the callback to execute.
    */
-  attachViewChangeListener = (listener) => {
+  attachViewChangeListener = (listener: Function) => {
     this._viewChangeListeners.add(listener);
   };
 }

@@ -1,29 +1,30 @@
 import React, { PureComponent } from "react";
 import PropTypes from "prop-types";
 import { LazyBrush } from "lazy-brush";
-import { Catenary } from "catenary-curve";
+// import { Catenary } from "catenary-curve";
 
 import ResizeObserver from "resize-observer-polyfill";
 
 import CoordinateSystem, { IDENTITY } from "./coordinateSystem";
 import drawImage from "./drawImage";
-import { DefaultState } from "./interactionStateMachine";
+import { DefaultState, DisabledState, DrawingState, PanState, ScaleOrPanState, TouchPanState, WaitForPinchState } from "./interactionStateMachine";
 import makePassiveEventOption from "./makePassiveEventOption";
+import { CanvasDrawProps, CanvasTypes, Line, Point } from "./types";
 
-function midPointBtw(p1, p2) {
+function midPointBtw(p1: Point, p2: Point) {
   return {
     x: p1.x + (p2.x - p1.x) / 2,
     y: p1.y + (p2.y - p1.y) / 2,
   };
 }
 
-const canvasStyle = {
+const canvasStyle: React.CSSProperties = {
   display: "block",
   position: "absolute",
 };
 
 // The order of these is important: grid > drawing > temp > interface
-const canvasTypes = ["grid", "drawing", "temp", "interface"];
+const canvasTypes = ["grid", "drawing", "temp", "interface"] as const;
 
 const dimensionsPropTypes = PropTypes.oneOfType([
   PropTypes.number,
@@ -35,7 +36,31 @@ const boundsProp = PropTypes.shape({
   max: PropTypes.number.isRequired,
 });
 
-export default class CanvasDraw extends PureComponent {
+export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
+  lines: Line[] = [];
+  erasedLines: Line[] = [];
+  coordSystem: CoordinateSystem
+  ctx: {
+    [key in CanvasTypes]?: CanvasRenderingContext2D;
+  }
+  canvas: {
+    [key in CanvasTypes]?: HTMLCanvasElement | null;
+  }
+  points: Point[] = [];
+  mouseHasMoved: boolean;
+  valuesChanged: boolean;
+  isDrawing: boolean;
+  isPressing: boolean;
+  deferRedrawOnViewChange: boolean;
+  interactionSM: DefaultState | DisabledState | PanState | WaitForPinchState | DrawingState | ScaleOrPanState | TouchPanState;
+  // catenary: Catenary;
+  lazy?: LazyBrush;
+  chainLength?: number;
+  canvasObserver?: ResizeObserver;
+  canvasContainer?: HTMLDivElement;
+  image?: HTMLImageElement;
+
+
   static propTypes = {
     onChange: PropTypes.func,
     loadTimeOffset: PropTypes.number,
@@ -94,13 +119,13 @@ export default class CanvasDraw extends PureComponent {
 
   ///// public API /////////////////////////////////////////////////////////////
 
-  constructor(props) {
+  constructor(props: CanvasDrawProps) {
     super(props);
 
     this.canvas = {};
     this.ctx = {};
 
-    this.catenary = new Catenary();
+    // this.catenary = new Catenary();
 
     this.points = [];
     this.lines = [];
@@ -121,11 +146,12 @@ export default class CanvasDraw extends PureComponent {
   }
 
   undo = () => {
-    let lines = [];
+    let lines: Line[] | undefined = [];
     if (this.lines.length) {
       lines = this.lines.slice(0, -1);
     } else if (this.erasedLines.length) {
-      lines = this.erasedLines.pop();
+      let poped = this.erasedLines.pop();
+      lines = poped ? [poped] : undefined;
     }
     this.clearExceptErasedLines();
     this.simulateDrawingLines({ lines, immediate: true });
@@ -133,7 +159,7 @@ export default class CanvasDraw extends PureComponent {
   };
 
   eraseAll = () => {
-    this.erasedLines.push([...this.lines]);
+    this.erasedLines.push(...this.lines);
     this.clearExceptErasedLines();
     this.triggerOnChange();
   };
@@ -148,7 +174,7 @@ export default class CanvasDraw extends PureComponent {
     return this.coordSystem.resetView();
   };
 
-  setView = (view) => {
+  setView = (view: object) => {
     return this.coordSystem.setView(view);
   };
 
@@ -173,11 +199,17 @@ export default class CanvasDraw extends PureComponent {
    * @param {bool} useBgImage Specifies whether the canvas' current background image should also be exported. Default is false.
    * @param {string} backgroundColour The desired background colour hex code, e.g. "#ffffff" for white.
    */
-  getDataURL = (fileType, useBgImage, backgroundColour) => {
+  getDataURL = (fileType: string, useBgImage: boolean, backgroundColour: string) => {
     // Get a reference to the "drawing" layer of the canvas
     let canvasToExport = this.canvas.drawing;
+    if (!canvasToExport) {
+      return "Canvas not found";
+    }
 
     let context = canvasToExport.getContext("2d");
+    if (!context) {
+      return "Canvas context not found";
+    }
 
     //cache height and width
     let width = canvasToExport.width;
@@ -224,14 +256,14 @@ export default class CanvasDraw extends PureComponent {
     return imageData;
   };
 
-  loadSaveData = (saveData, immediate = this.props.immediateLoading) => {
+  loadSaveData = (saveData: unknown, immediate = this.props.immediateLoading) => {
     if (typeof saveData !== "string") {
       throw new Error("saveData needs to be of type string!");
     }
 
     const { lines, width, height } = JSON.parse(saveData);
 
-    if (!lines || typeof lines.push !== "function") {
+    if (!lines || typeof lines.push !== "function" || !Array.isArray(lines)) {
       throw new Error("saveData.lines needs to be an array!");
     }
 
@@ -254,9 +286,9 @@ export default class CanvasDraw extends PureComponent {
       this.simulateDrawingLines({
         lines: lines.map((line) => ({
           ...line,
-          points: line.points.map((p) => ({
-            x: p.x * scaleX,
-            y: p.y * scaleY,
+          points: line.points.map((p: unknown) => ({
+            x: p && typeof p === 'object' && 'x' in p ? (p as { x: number }).x * scaleX : NaN,
+            y: p && typeof p === 'object' && 'y' in p ? (p as { y: number }).y * scaleY : NaN,
           })),
           brushRadius: line.brushRadius * scaleAvg,
         })),
@@ -283,7 +315,9 @@ export default class CanvasDraw extends PureComponent {
     this.canvasObserver = new ResizeObserver((entries, observer) =>
       this.handleCanvasResize(entries, observer)
     );
-    this.canvasObserver.observe(this.canvasContainer);
+    if (this.canvasContainer) {
+      this.canvasObserver.observe(this.canvasContainer);
+    }
 
     this.drawImage();
     this.loop();
@@ -291,14 +325,16 @@ export default class CanvasDraw extends PureComponent {
     window.setTimeout(() => {
       const initX = window.innerWidth / 2;
       const initY = window.innerHeight / 2;
-      this.lazy.update(
-        { x: initX - this.chainLength / 4, y: initY },
-        { both: true }
-      );
-      this.lazy.update(
-        { x: initX + this.chainLength / 4, y: initY },
-        { both: false }
-      );
+      if (this.lazy && this.chainLength) {
+        this.lazy.update(
+          { x: initX - this.chainLength / 4, y: initY },
+          { both: true }
+        );
+        this.lazy.update(
+          { x: initX + this.chainLength / 4, y: initY },
+          { both: false }
+        );
+      }
       this.mouseHasMoved = true;
       this.valuesChanged = true;
       this.clearExceptErasedLines();
@@ -313,18 +349,21 @@ export default class CanvasDraw extends PureComponent {
     // This is necessary to prevent the default event action on chrome.
     // https://github.com/facebook/react/issues/14856
     this.canvas.interface &&
-      this.canvas.interface.addEventListener(
+    this.canvas.interface.addEventListener(
         "wheel",
+        // @ts-ignore
         this.handleWheel,
         makePassiveEventOption()
       );
   }
 
-  componentDidUpdate(prevProps) {
+  componentDidUpdate(prevProps: CanvasDrawProps) {
     if (prevProps.lazyRadius !== this.props.lazyRadius) {
       // Set new lazyRadius values
       this.chainLength = this.props.lazyRadius * window.devicePixelRatio;
-      this.lazy.setRadius(this.props.lazyRadius * window.devicePixelRatio);
+      if (this.lazy) {
+        this.lazy.setRadius(this.props.lazyRadius * window.devicePixelRatio);
+      }
     }
 
     if (prevProps.saveData !== this.props.saveData) {
@@ -347,8 +386,11 @@ export default class CanvasDraw extends PureComponent {
   }
 
   componentWillUnmount = () => {
-    this.canvasObserver.unobserve(this.canvasContainer);
+    if (this.canvasObserver && this.canvasContainer) {
+      this.canvasObserver.unobserve(this.canvasContainer);
+    }
     this.canvas.interface &&
+      // @ts-ignore
       this.canvas.interface.removeEventListener("wheel", this.handleWheel);
   };
 
@@ -378,7 +420,7 @@ export default class CanvasDraw extends PureComponent {
               ref={(canvas) => {
                 if (canvas) {
                   this.canvas[name] = canvas;
-                  this.ctx[name] = canvas.getContext("2d");
+                  this.ctx[name] = canvas.getContext("2d") || undefined;
                   if (isInterface) {
                     this.coordSystem.canvas = canvas;
                   }
@@ -402,21 +444,25 @@ export default class CanvasDraw extends PureComponent {
 
   ///// Event Handlers
 
-  handleWheel = (e) => {
+  handleWheel = (e: React.WheelEvent) => {
+    // @ts-ignore
     this.interactionSM = this.interactionSM.handleMouseWheel(e, this);
   };
 
-  handleDrawStart = (e) => {
+  handleDrawStart = (e: React.MouseEvent | React.TouchEvent) => {
+    // @ts-ignore
     this.interactionSM = this.interactionSM.handleDrawStart(e, this);
     this.mouseHasMoved = true;
   };
 
-  handleDrawMove = (e) => {
+  handleDrawMove = (e: React.MouseEvent | React.TouchEvent) => {
+    // @ts-ignore
     this.interactionSM = this.interactionSM.handleDrawMove(e, this);
     this.mouseHasMoved = true;
   };
 
-  handleDrawEnd = (e) => {
+  handleDrawEnd = (e: React.MouseEvent | React.TouchEvent) => {
+    // @ts-ignore
     this.interactionSM = this.interactionSM.handleDrawEnd(e, this);
     this.mouseHasMoved = true;
   };
@@ -431,11 +477,15 @@ export default class CanvasDraw extends PureComponent {
       .forEach((ctx) => {
         this.clearWindow(ctx);
         const m = this.coordSystem.transformMatrix;
-        ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+        if (ctx) {
+          ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+        }
       });
 
     if (!this.deferRedrawOnViewChange) {
-      this.drawGrid(this.ctx.grid);
+      if (this.ctx.grid) {
+        this.drawGrid(this.ctx.grid);
+      }
       this.redrawImage();
       this.loop({ once: true });
 
@@ -445,16 +495,24 @@ export default class CanvasDraw extends PureComponent {
     }
   };
 
-  handleCanvasResize = (entries) => {
+  handleCanvasResize = (entries: ResizeObserverEntry[], _observer?: unknown) => {
     const saveData = this.getSaveData();
     this.deferRedrawOnViewChange = true;
     try {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
-        this.setCanvasSize(this.canvas.interface, width, height);
-        this.setCanvasSize(this.canvas.drawing, width, height);
-        this.setCanvasSize(this.canvas.temp, width, height);
-        this.setCanvasSize(this.canvas.grid, width, height);
+        if (this.canvas.interface) {
+          this.setCanvasSize(this.canvas.interface, width, height);
+        }
+        if (this.canvas.drawing) {
+          this.setCanvasSize(this.canvas.drawing, width, height);
+        }
+        if (this.canvas.temp) {
+          this.setCanvasSize(this.canvas.temp, width, height);
+        }
+        if (this.canvas.grid) {
+          this.setCanvasSize(this.canvas.grid, width, height);
+        }
 
         this.coordSystem.documentSize = { width, height };
         this.drawGrid(this.ctx.grid);
@@ -469,7 +527,7 @@ export default class CanvasDraw extends PureComponent {
 
   ///// Helpers
 
-  clampPointToDocument = (point) => {
+  clampPointToDocument = (point: Point) => {
     if (this.props.clampLinesToDocument) {
       return {
         x: Math.max(Math.min(point.x, this.props.canvasWidth), 0),
@@ -486,11 +544,15 @@ export default class CanvasDraw extends PureComponent {
       drawImage({ ctx: this.ctx.grid, img: this.image });
   };
 
-  simulateDrawingLines = ({ lines, immediate }) => {
+  simulateDrawingLines = ({ lines, immediate }: { lines: Line[] | undefined; immediate: boolean }) => {
     // Simulate live-drawing of the loaded lines
     // TODO use a generator
     let curTime = 0;
     let timeoutGap = immediate ? 0 : this.props.loadTimeOffset;
+
+    if (!lines) {
+      return;
+    }
 
     lines.forEach((line) => {
       const { points, brushColor, brushRadius } = line;
@@ -531,43 +593,54 @@ export default class CanvasDraw extends PureComponent {
     });
   };
 
-  setCanvasSize = (canvas, width, height) => {
+  setCanvasSize = (canvas: HTMLCanvasElement, width: number, height: number) => {
     canvas.width = width;
     canvas.height = height;
-    canvas.style.width = width;
-    canvas.style.height = height;
+    canvas.style.width = width.toString() ;
+    canvas.style.height = height.toString();
   };
 
-  drawPoints = ({ points, brushColor, brushRadius }) => {
-    this.ctx.temp.lineJoin = "round";
-    this.ctx.temp.lineCap = "round";
-    this.ctx.temp.strokeStyle = brushColor;
+  drawPoints = ({ points, brushColor, brushRadius }: { points: Point[]; brushColor: string; brushRadius: number }) => {
+    if (this.ctx.temp) {
+      this.ctx.temp.lineJoin = "round";
+      this.ctx.temp.lineCap = "round";
+      this.ctx.temp.strokeStyle = brushColor;
+    }
 
     this.clearWindow(this.ctx.temp);
-    this.ctx.temp.lineWidth = brushRadius * 2;
+    if (this.ctx.temp) {
+      this.ctx.temp.lineWidth = brushRadius * 2;
+    }
 
     let p1 = points[0];
     let p2 = points[1];
 
-    this.ctx.temp.moveTo(p2.x, p2.y);
-    this.ctx.temp.beginPath();
+    if (this.ctx.temp) {
+      this.ctx.temp.moveTo(p2.x, p2.y);
+      this.ctx.temp.beginPath();
+    }
 
     for (var i = 1, len = points.length; i < len; i++) {
       // we pick the point between pi+1 & pi+2 as the
       // end point and p1 as our control point
       var midPoint = midPointBtw(p1, p2);
-      this.ctx.temp.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
+      if (this.ctx.temp) {
+        this.ctx.temp.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
+      }
       p1 = points[i];
       p2 = points[i + 1];
     }
     // Draw last line as a straight line while
     // we wait for the next point to be able to calculate
     // the bezier control point
-    this.ctx.temp.lineTo(p1.x, p1.y);
-    this.ctx.temp.stroke();
+    if (this.ctx.temp) {
+      this.ctx.temp.lineTo(p1.x, p1.y);
+      this.ctx.temp.stroke();
+    }
   };
 
-  saveLine = ({ brushColor, brushRadius } = {}) => {
+  saveLine = (params?: { brushColor: string; brushRadius: number }) => {
+    const { brushColor, brushRadius } = params || {};
     if (this.points.length < 2) return;
 
     // Save as new line
@@ -582,13 +655,15 @@ export default class CanvasDraw extends PureComponent {
 
     // Copy the line to the drawing canvas
     this.inClientSpace([this.ctx.drawing, this.ctx.temp], () => {
-      this.ctx.drawing.drawImage(
-        this.canvas.temp,
-        0,
-        0,
-        this.canvas.drawing.width,
-        this.canvas.drawing.height
-      );
+      if (this.ctx.drawing && this.canvas.temp) {
+        this.ctx.drawing.drawImage(
+          this.canvas.temp,
+          0,
+          0,
+          this.canvas.drawing ? this.canvas.drawing.width || NaN : NaN,
+          this.canvas.drawing ? this.canvas.drawing.height || NaN : NaN
+        );
+      } 
     });
 
     // Clear the temporary line-drawing canvas
@@ -601,9 +676,13 @@ export default class CanvasDraw extends PureComponent {
     this.props.onChange && this.props.onChange(this);
   };
 
-  clearWindow = (ctx) => {
-    this.inClientSpace([ctx], () =>
-      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+  clearWindow = (ctx?: CanvasRenderingContext2D | null) => {
+    this.inClientSpace([ctx], () => {
+      if (ctx == null) {
+        return
+      }
+      return ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    }
     );
   };
 
@@ -616,12 +695,13 @@ export default class CanvasDraw extends PureComponent {
 
   loop = ({ once = false } = {}) => {
     if (this.mouseHasMoved || this.valuesChanged) {
-      const pointer = this.lazy.getPointerCoordinates();
-      const brush = this.lazy.getBrushCoordinates();
-
-      this.drawInterface(this.ctx.interface, pointer, brush);
-      this.mouseHasMoved = false;
-      this.valuesChanged = false;
+      if (this.lazy) {
+        const pointer = this.lazy.getPointerCoordinates();
+        const brush = this.lazy.getBrushCoordinates();
+        this.drawInterface(this.ctx.interface, pointer, brush);
+        this.mouseHasMoved = false;
+        this.valuesChanged = false;
+      }
     }
 
     if (!once) {
@@ -631,23 +711,29 @@ export default class CanvasDraw extends PureComponent {
     }
   };
 
-  inClientSpace = (ctxs, action) => {
+  inClientSpace = (ctxs: Array<CanvasRenderingContext2D | null | undefined>, action: () => void) => {
     ctxs.forEach((ctx) => {
-      ctx.save();
-      ctx.setTransform(
+      if (ctx) {
+        ctx.save();
+        ctx.setTransform(
         IDENTITY.a,
         IDENTITY.b,
         IDENTITY.c,
         IDENTITY.d,
         IDENTITY.e,
         IDENTITY.f
-      );
+        );
+      }
     });
 
     try {
       action();
     } finally {
-      ctxs.forEach((ctx) => ctx.restore());
+      ctxs.forEach((ctx) => {
+        if (ctx) {
+          ctx.restore();
+        }
+      });
     }
   };
 
@@ -667,13 +753,18 @@ export default class CanvasDraw extends PureComponent {
     this.image.src = this.props.imgSrc;
   };
 
-  drawGrid = (ctx) => {
+  drawGrid = (ctx?: CanvasRenderingContext2D | null) => {
     if (this.props.hideGrid) return;
 
     this.clearWindow(ctx);
+    if (ctx == null) {
+      return
+    }
 
     const gridSize = 25;
-    const { viewMin, viewMax } = this.coordSystem.canvasBounds;
+    const bounds = this.coordSystem.canvasBounds;
+    const viewMin = bounds ? bounds.viewMin : { x: NaN, y: NaN };
+    const viewMax = bounds ? bounds.viewMax : { x: NaN, y: NaN };
     const minx = Math.floor(viewMin.x / gridSize - 1) * gridSize;
     const miny = Math.floor(viewMin.y / gridSize - 1) * gridSize;
     const maxx = viewMax.x + gridSize;
@@ -708,8 +799,11 @@ export default class CanvasDraw extends PureComponent {
     }
   };
 
-  drawInterface = (ctx, pointer, brush) => {
+  drawInterface = (ctx: CanvasRenderingContext2D | null | undefined, pointer: Point, brush: Point) => {
     if (this.props.hideInterface) return;
+    if (ctx == null) {
+      return
+    }
 
     this.clearWindow(ctx);
 
@@ -726,19 +820,21 @@ export default class CanvasDraw extends PureComponent {
     ctx.fill();
 
     // Draw catenary
-    if (this.lazy.isEnabled()) {
-      ctx.beginPath();
-      ctx.lineWidth = 2;
-      ctx.lineCap = "round";
-      ctx.setLineDash([2, 4]);
-      ctx.strokeStyle = this.props.catenaryColor;
-      this.catenary.drawToCanvas(
-        this.ctx.interface,
-        brush,
-        pointer,
-        this.chainLength
-      );
-      ctx.stroke();
+    if (this.lazy) {
+      if (this.lazy.isEnabled()) {
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        ctx.setLineDash([2, 4]);
+        ctx.strokeStyle = this.props.catenaryColor;
+        // this.catenary.drawToCanvas(
+        //   this.ctx.interface,
+        //   brush,
+        //   pointer,
+        //   this.chainLength
+        // );
+        ctx.stroke();
+      }
     }
 
     // Draw brush point (the one in the middle of the brush preview)
