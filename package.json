@@ -52,14 +52,14 @@
     "style-loader": "^0.19.1"
   },
   "author": {
-    "name": "Martin Beierling",
-    "email": "mbeierling@gmail.com"
+    "name": "sacu2red",
+    "email": "sacu2red@gmail.com"
   },
-  "homepage": "https://embiem.github.io/react-canvas-draw/",
+  "homepage": "https://github.com/sacru2red/react-canvas-draw/",
   "license": "MIT",
-  "repository": "https://github.com/embiem/react-canvas-draw",
+  "repository": "https://github.com/sacru2red/react-canvas-draw",
   "bugs": {
-    "url": "https://github.com/embiem/react-canvas-draw/issues"
+    "url": "https://github.com/sacru2red/react-canvas-draw/issues"
   },
   "keywords": [
     "react-component",
