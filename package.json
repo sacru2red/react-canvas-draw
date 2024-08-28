@@ -21,11 +21,12 @@
     "contributors:add": "all-contributors add",
     "contributors:generate": "all-contributors generate",
     "prepare": "npm run build",
-    "release": "npx release-it"
+    "release": "npx release-it",
+    "tsc": "tsc"
   },
   "dependencies": {
-    "catenary-curve": "^1.0.1",
-    "lazy-brush": "^1.0.1",
+    "catenary-curve": "^2.0.1",
+    "lazy-brush": "^2.0.1",
     "prop-types": "^15.6.2",
     "resize-observer-polyfill": "^1.5.0"
   },
@@ -33,6 +34,7 @@
     "react": ">= 16"
   },
   "devDependencies": {
+    "@types/react": "^18.3.4",
     "all-contributors-cli": "^6.15.0",
     "babel-eslint": "^7.2.3",
     "codecov": "3.6.x",
@@ -51,7 +53,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "release-it": "^14.14.3",
-    "style-loader": "^0.19.1"
+    "style-loader": "^0.19.1",
+    "typescript": "4.4.4"
   },
   "author": {
     "name": "sacu2red",
