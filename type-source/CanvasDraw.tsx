@@ -1,8 +1,6 @@
 import React, { PureComponent } from "react";
 import PropTypes from "prop-types";
 import { LazyBrush } from "lazy-brush";
-// import { Catenary } from "catenary-curve";
-
 import ResizeObserver from "resize-observer-polyfill";
 
 import CoordinateSystem, { IDENTITY } from "./coordinateSystem";
