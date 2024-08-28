@@ -1,5 +1,5 @@
 import expect from "expect";
-import CoordinateSystem from "../src/coordinateSystem";
+import CoordinateSystem from "../type-build/coordinateSystem";
 
 describe("CoordinateSystem", () => {
   let subject;
