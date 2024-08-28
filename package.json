@@ -20,7 +20,8 @@
     "deploy": "npm run build && gh-pages -d demo/dist",
     "contributors:add": "all-contributors add",
     "contributors:generate": "all-contributors generate",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "release": "release-it"
   },
   "dependencies": {
     "catenary-curve": "^1.0.1",
@@ -49,6 +50,7 @@
     "nwb": "^0.25.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "release-it": "^17.6.0",
     "style-loader": "^0.19.1"
   },
   "author": {
