@@ -4,6 +4,7 @@
   "description": "A simple yet powerful canvas-drawing component for React.",
   "main": "lib/index.js",
   "module": "es/index.js",
+  "types": "type-build/index.d.ts",
   "files": [
     "css",
     "es",
