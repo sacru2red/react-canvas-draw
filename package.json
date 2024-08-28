@@ -4,15 +4,16 @@
   "description": "A simple yet powerful canvas-drawing component for React.",
   "main": "lib/index.js",
   "module": "es/index.js",
-  "types": "type-build/index.d.ts",
+  "types": "type/index.d.ts",
   "files": [
     "css",
     "es",
     "lib",
-    "umd"
+    "umd",
+    "type"
   ],
   "scripts": {
-    "build": "nwb build-react-component",
+    "build": "npm run tsc && node copy.js && rimraf -g type-build/*.d.ts && nwb build-react-component",
     "clean": "nwb clean-module && nwb clean-demo",
     "start": "nwb serve-react-demo",
     "test": "nwb test-react",
@@ -40,6 +41,7 @@
     "babel-eslint": "^7.2.3",
     "codecov": "3.6.x",
     "coveralls": "3.0.x",
+    "cpy": "^8.1.2",
     "css-loader": "^3.5.3",
     "enzyme": "^3.3.0",
     "enzyme-adapter-react-16": "^1.1.1",
@@ -54,6 +56,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "release-it": "^14.14.3",
+    "rimraf": "^3.0.2",
     "style-loader": "^0.19.1",
     "typescript": "4.4.4"
   },
