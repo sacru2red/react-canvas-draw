@@ -1,63 +1,74 @@
-import React, { PureComponent } from "react";
-import PropTypes from "prop-types";
-import { LazyBrush } from "lazy-brush";
-import ResizeObserver from "resize-observer-polyfill";
+import React, { PureComponent } from 'react'
+import PropTypes from 'prop-types'
+import { LazyBrush } from 'lazy-brush'
+import ResizeObserver from 'resize-observer-polyfill'
 
-import CoordinateSystem, { IDENTITY } from "./coordinateSystem";
-import drawImage from "./drawImage";
-import { DefaultState, DisabledState, DrawingState, PanState, ScaleOrPanState, TouchPanState, WaitForPinchState } from "./interactionStateMachine";
-import makePassiveEventOption from "./makePassiveEventOption";
-import { CanvasDrawProps, CanvasTypes, Line, Point } from "./types";
+import CoordinateSystem, { IDENTITY } from './coordinateSystem'
+import drawImage from './drawImage'
+import {
+  DefaultState,
+  DisabledState,
+  DrawingState,
+  PanState,
+  ScaleOrPanState,
+  TouchPanState,
+  WaitForPinchState,
+} from './interactionStateMachine'
+import makePassiveEventOption from './makePassiveEventOption'
+import { CanvasDrawProps, CanvasTypes, Line, Point } from './types'
 
 function midPointBtw(p1: Point, p2: Point) {
   return {
     x: p1.x + (p2.x - p1.x) / 2,
     y: p1.y + (p2.y - p1.y) / 2,
-  };
+  }
 }
 
 const canvasStyle: React.CSSProperties = {
-  display: "block",
-  position: "absolute",
-};
+  display: 'block',
+  position: 'absolute',
+}
 
 // The order of these is important: grid > drawing > temp > interface
-const canvasTypes = ["grid", "drawing", "temp", "interface"] as const;
+const canvasTypes = ['grid', 'drawing', 'temp', 'interface'] as const
 
-const dimensionsPropTypes = PropTypes.oneOfType([
-  PropTypes.number,
-  PropTypes.string,
-]);
+const dimensionsPropTypes = PropTypes.oneOfType([PropTypes.number, PropTypes.string])
 
 const boundsProp = PropTypes.shape({
   min: PropTypes.number.isRequired,
   max: PropTypes.number.isRequired,
-});
+})
 
 export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
-  lines: Line[] = [];
-  erasedLines: Line[] = [];
+  lines: Line[] = []
+  erasedLines: Line[] = []
   coordSystem: CoordinateSystem
   ctx: {
-    [key in CanvasTypes]?: CanvasRenderingContext2D;
+    [key in CanvasTypes]?: CanvasRenderingContext2D
   }
   canvas: {
-    [key in CanvasTypes]?: HTMLCanvasElement | null;
+    [key in CanvasTypes]?: HTMLCanvasElement | null
   }
-  points: Point[] = [];
-  mouseHasMoved: boolean;
-  valuesChanged: boolean;
-  isDrawing: boolean;
-  isPressing: boolean;
-  deferRedrawOnViewChange: boolean;
-  interactionSM: DefaultState | DisabledState | PanState | WaitForPinchState | DrawingState | ScaleOrPanState | TouchPanState;
+  points: Point[] = []
+  mouseHasMoved: boolean
+  valuesChanged: boolean
+  isDrawing: boolean
+  isPressing: boolean
+  deferRedrawOnViewChange: boolean
+  interactionSM:
+    | DefaultState
+    | DisabledState
+    | PanState
+    | WaitForPinchState
+    | DrawingState
+    | ScaleOrPanState
+    | TouchPanState
   // catenary: Catenary;
-  lazy?: LazyBrush;
-  chainLength?: number;
-  canvasObserver?: ResizeObserver;
-  canvasContainer?: HTMLDivElement;
-  image?: HTMLImageElement;
-
+  lazy?: LazyBrush
+  chainLength?: number
+  canvasObserver?: ResizeObserver
+  canvasContainer?: HTMLDivElement
+  image?: HTMLImageElement
 
   static propTypes = {
     onChange: PropTypes.func,
@@ -85,23 +96,23 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     mouseZoomFactor: PropTypes.number,
     zoomExtents: boundsProp,
     clampLinesToDocument: PropTypes.bool,
-  };
+  }
 
   static defaultProps = {
     onChange: null,
     loadTimeOffset: 5,
     lazyRadius: 12,
     brushRadius: 10,
-    brushColor: "#444",
-    catenaryColor: "#0a0302",
-    gridColor: "rgba(150,150,150,0.17)",
-    backgroundColor: "#FFF",
+    brushColor: '#444',
+    catenaryColor: '#0a0302',
+    gridColor: 'rgba(150,150,150,0.17)',
+    backgroundColor: '#FFF',
     hideGrid: false,
     canvasWidth: 400,
     canvasHeight: 400,
     disabled: false,
-    imgSrc: "",
-    saveData: "",
+    imgSrc: '',
+    saveData: '',
     immediateLoading: false,
     hideInterface: false,
     gridSizeX: 25,
@@ -113,68 +124,68 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     mouseZoomFactor: 0.01,
     zoomExtents: { min: 0.33, max: 3 },
     clampLinesToDocument: false,
-  };
+  }
 
   ///// public API /////////////////////////////////////////////////////////////
 
   constructor(props: CanvasDrawProps) {
-    super(props);
+    super(props)
 
-    this.canvas = {};
-    this.ctx = {};
+    this.canvas = {}
+    this.ctx = {}
 
     // this.catenary = new Catenary();
 
-    this.points = [];
-    this.lines = [];
-    this.erasedLines = [];
+    this.points = []
+    this.lines = []
+    this.erasedLines = []
 
-    this.mouseHasMoved = true;
-    this.valuesChanged = true;
-    this.isDrawing = false;
-    this.isPressing = false;
-    this.deferRedrawOnViewChange = false;
+    this.mouseHasMoved = true
+    this.valuesChanged = true
+    this.isDrawing = false
+    this.isPressing = false
+    this.deferRedrawOnViewChange = false
 
-    this.interactionSM = new DefaultState();
+    this.interactionSM = new DefaultState()
     this.coordSystem = new CoordinateSystem({
       scaleExtents: props.zoomExtents,
       documentSize: { width: props.canvasWidth, height: props.canvasHeight },
-    });
-    this.coordSystem.attachViewChangeListener(this.applyView.bind(this));
+    })
+    this.coordSystem.attachViewChangeListener(this.applyView.bind(this))
   }
 
   undo = () => {
-    let lines: Line[] | undefined = [];
+    let lines: Line[] | undefined = []
     if (this.lines.length) {
-      lines = this.lines.slice(0, -1);
+      lines = this.lines.slice(0, -1)
     } else if (this.erasedLines.length) {
-      let poped = this.erasedLines.pop();
-      lines = poped ? [poped] : undefined;
+      let poped = this.erasedLines.pop()
+      lines = poped ? [poped] : undefined
     }
-    this.clearExceptErasedLines();
-    this.simulateDrawingLines({ lines, immediate: true });
-    this.triggerOnChange();
-  };
+    this.clearExceptErasedLines()
+    this.simulateDrawingLines({ lines, immediate: true })
+    this.triggerOnChange()
+  }
 
   eraseAll = () => {
-    this.erasedLines.push(...this.lines);
-    this.clearExceptErasedLines();
-    this.triggerOnChange();
-  };
+    this.erasedLines.push(...this.lines)
+    this.clearExceptErasedLines()
+    this.triggerOnChange()
+  }
 
   clear = () => {
-    this.erasedLines = [];
-    this.clearExceptErasedLines();
-    this.resetView();
-  };
+    this.erasedLines = []
+    this.clearExceptErasedLines()
+    this.resetView()
+  }
 
   resetView = () => {
-    return this.coordSystem.resetView();
-  };
+    return this.coordSystem.resetView()
+  }
 
   setView = (view: object) => {
-    return this.coordSystem.setView(view);
-  };
+    return this.coordSystem.setView(view)
+  }
 
   getSaveData = () => {
     // Construct and return the stringified saveData object
@@ -182,8 +193,8 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
       lines: this.lines,
       width: this.props.canvasWidth,
       height: this.props.canvasHeight,
-    });
-  };
+    })
+  }
 
   /**
    * Combination of work by Ernie Arrowsmith and emizz
@@ -199,87 +210,84 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
    */
   getDataURL = (fileType: string, useBgImage: boolean, backgroundColour: string) => {
     // Get a reference to the "drawing" layer of the canvas
-    let canvasToExport = this.canvas.drawing;
+    let canvasToExport = this.canvas.drawing
     if (!canvasToExport) {
-      return "Canvas not found";
+      return 'Canvas not found'
     }
 
-    let context = canvasToExport.getContext("2d");
+    let context = canvasToExport.getContext('2d')
     if (!context) {
-      return "Canvas context not found";
+      return 'Canvas context not found'
     }
 
     //cache height and width
-    let width = canvasToExport.width;
-    let height = canvasToExport.height;
+    let width = canvasToExport.width
+    let height = canvasToExport.height
 
     //get the current ImageData for the canvas
-    let storedImageData = context.getImageData(0, 0, width, height);
+    let storedImageData = context.getImageData(0, 0, width, height)
 
     //store the current globalCompositeOperation
-    var compositeOperation = context.globalCompositeOperation;
+    var compositeOperation = context.globalCompositeOperation
 
     //set to draw behind current content
-    context.globalCompositeOperation = "destination-over";
+    context.globalCompositeOperation = 'destination-over'
 
     // If "useBgImage" has been set to true, this takes precedence over the background colour parameter
     if (useBgImage) {
-      if (!this.props.imgSrc) return "Background image source not set";
+      if (!this.props.imgSrc) return 'Background image source not set'
 
       // Write the background image
-      this.drawImage();
+      this.drawImage()
     } else if (backgroundColour != null) {
       //set background color
-      context.fillStyle = backgroundColour;
+      context.fillStyle = backgroundColour
 
       //fill entire canvas with background colour
-      context.fillRect(0, 0, width, height);
+      context.fillRect(0, 0, width, height)
     }
 
     // If the file type has not been specified, default to PNG
-    if (!fileType) fileType = "png";
+    if (!fileType) fileType = 'png'
 
     // Export the canvas to data URL
-    let imageData = canvasToExport.toDataURL(`image/${fileType}`);
+    let imageData = canvasToExport.toDataURL(`image/${fileType}`)
 
     //clear the canvas
-    context.clearRect(0, 0, width, height);
+    context.clearRect(0, 0, width, height)
 
     //restore it with original / cached ImageData
-    context.putImageData(storedImageData, 0, 0);
+    context.putImageData(storedImageData, 0, 0)
 
     //reset the globalCompositeOperation to what it was
-    context.globalCompositeOperation = compositeOperation;
+    context.globalCompositeOperation = compositeOperation
 
-    return imageData;
-  };
+    return imageData
+  }
 
   loadSaveData = (saveData: unknown, immediate = this.props.immediateLoading) => {
-    if (typeof saveData !== "string") {
-      throw new Error("saveData needs to be of type string!");
+    if (typeof saveData !== 'string') {
+      throw new Error('saveData needs to be of type string!')
     }
 
-    const { lines, width, height } = JSON.parse(saveData);
+    const { lines, width, height } = JSON.parse(saveData)
 
-    if (!lines || typeof lines.push !== "function" || !Array.isArray(lines)) {
-      throw new Error("saveData.lines needs to be an array!");
+    if (!lines || typeof lines.push !== 'function' || !Array.isArray(lines)) {
+      throw new Error('saveData.lines needs to be an array!')
     }
 
-    this.clear();
+    this.clear()
 
-    if (
-      width === this.props.canvasWidth &&
-      height === this.props.canvasHeight
-    ) {
+    if (width === this.props.canvasWidth && height === this.props.canvasHeight) {
       this.simulateDrawingLines({
         lines,
         immediate,
-      });
+      })
     } else {
       // we need to rescale the lines based on saved & current dimensions
-      const scaleX = this.props.canvasWidth / width;
-      const scaleY = this.props.canvasHeight / height;
-      const scaleAvg = (scaleX + scaleY) / 2;
+      const scaleX = this.props.canvasWidth / width
+      const scaleY = this.props.canvasHeight / height
+      const scaleAvg = (scaleX + scaleY) / 2
 
       this.simulateDrawingLines({
         lines: lines.map((line) => ({
@@ -291,9 +299,9 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
           brushRadius: line.brushRadius * scaleAvg,
         })),
         immediate,
-      });
+      })
     }
-  };
+  }
 
   ///// private API ////////////////////////////////////////////////////////////
 
@@ -307,120 +315,114 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
         x: window.innerWidth / 2,
         y: window.innerHeight / 2,
       },
-    });
-    this.chainLength = this.props.lazyRadius * window.devicePixelRatio;
+    })
+    this.chainLength = this.props.lazyRadius * window.devicePixelRatio
 
     this.canvasObserver = new ResizeObserver((entries, observer) =>
-      this.handleCanvasResize(entries, observer)
-    );
+      this.handleCanvasResize(entries, observer),
+    )
     if (this.canvasContainer) {
-      this.canvasObserver.observe(this.canvasContainer);
+      this.canvasObserver.observe(this.canvasContainer)
     }
 
-    this.drawImage();
-    this.loop();
+    this.drawImage()
+    this.loop()
 
     window.setTimeout(() => {
-      const initX = window.innerWidth / 2;
-      const initY = window.innerHeight / 2;
+      const initX = window.innerWidth / 2
+      const initY = window.innerHeight / 2
       if (this.lazy && this.chainLength) {
-        this.lazy.update(
-          { x: initX - this.chainLength / 4, y: initY },
-          { both: true }
-        );
-        this.lazy.update(
-          { x: initX + this.chainLength / 4, y: initY },
-          { both: false }
-        );
+        this.lazy.update({ x: initX - this.chainLength / 4, y: initY }, { both: true })
+        this.lazy.update({ x: initX + this.chainLength / 4, y: initY }, { both: false })
       }
-      this.mouseHasMoved = true;
-      this.valuesChanged = true;
-      this.clearExceptErasedLines();
+      this.mouseHasMoved = true
+      this.valuesChanged = true
+      this.clearExceptErasedLines()
 
       // Load saveData from prop if it exists
       if (this.props.saveData) {
-        this.loadSaveData(this.props.saveData);
+        this.loadSaveData(this.props.saveData)
       }
-    }, 100);
+    }, 100)
 
     // Attach our wheel event listener here instead of in the render so that we can specify a non-passive listener.
     // This is necessary to prevent the default event action on chrome.
     // https://github.com/facebook/react/issues/14856
     this.canvas.interface &&
-    this.canvas.interface.addEventListener(
-        "wheel",
+      this.canvas.interface.addEventListener(
+        'wheel',
         // @ts-ignore
         this.handleWheel,
-        makePassiveEventOption()
-      );
+        makePassiveEventOption(),
+      )
   }
 
   componentDidUpdate(prevProps: CanvasDrawProps) {
     if (prevProps.lazyRadius !== this.props.lazyRadius) {
       // Set new lazyRadius values
-      this.chainLength = this.props.lazyRadius * window.devicePixelRatio;
+      this.chainLength = this.props.lazyRadius * window.devicePixelRatio
       if (this.lazy) {
-        this.lazy.setRadius(this.props.lazyRadius * window.devicePixelRatio);
+        this.lazy.setRadius(this.props.lazyRadius * window.devicePixelRatio)
       }
     }
 
     if (prevProps.saveData !== this.props.saveData) {
-      this.loadSaveData(this.props.saveData);
+      this.loadSaveData(this.props.saveData)
     }
 
     if (JSON.stringify(prevProps) !== JSON.stringify(this.props)) {
       // Signal this.loop function that values changed
-      this.valuesChanged = true;
+      this.valuesChanged = true
     }
 
-    this.coordSystem.scaleExtents = this.props.zoomExtents;
+    this.coordSystem.scaleExtents = this.props.zoomExtents
     if (!this.props.enablePanAndZoom) {
-      this.coordSystem.resetView();
+      this.coordSystem.resetView()
     }
 
     if (prevProps.imgSrc !== this.props.imgSrc) {
-      this.drawImage();
+      this.drawImage()
     }
   }
 
   componentWillUnmount = () => {
     if (this.canvasObserver && this.canvasContainer) {
-      this.canvasObserver.unobserve(this.canvasContainer);
+      this.canvasObserver.unobserve(this.canvasContainer)
     }
     this.canvas.interface &&
       // @ts-ignore
-      this.canvas.interface.removeEventListener("wheel", this.handleWheel);
-  };
+      this.canvas.interface.removeEventListener('wheel', this.handleWheel)
+  }
 
   render() {
     return (
       <div
         className={this.props.className}
         style={{
-          display: "block",
+          display: 'block',
           background: this.props.backgroundColor,
-          touchAction: "none",
+          touchAction: 'none',
           width: this.props.canvasWidth,
           height: this.props.canvasHeight,
           ...this.props.style,
         }}
         ref={(container) => {
           if (container) {
-            this.canvasContainer = container;
+            this.canvasContainer = container
           }
         }}
       >
         {canvasTypes.map((name) => {
-          const isInterface = name === "interface";
+          const isInterface = name === 'interface'
           return (
             <canvas
               key={name}
               ref={(canvas) => {
                 if (canvas) {
-                  this.canvas[name] = canvas;
-                  this.ctx[name] = canvas.getContext("2d") || undefined;
+                  this.canvas[name] = canvas
+                  this.ctx[name] = canvas.getContext('2d') || undefined
                   if (isInterface) {
-                    this.coordSystem.canvas = canvas;
+                    this.coordSystem.canvas = canvas
                   }
                 }
               }}
@@ -434,94 +436,94 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
               onTouchEnd={isInterface ? this.handleDrawEnd : undefined}
               onTouchCancel={isInterface ? this.handleDrawEnd : undefined}
             />
-          );
+          )
         })}
       </div>
-    );
+    )
   }
 
   ///// Event Handlers
 
   handleWheel = (e: React.WheelEvent) => {
     // @ts-ignore
-    this.interactionSM = this.interactionSM.handleMouseWheel(e, this);
-  };
+    this.interactionSM = this.interactionSM.handleMouseWheel(e, this)
+  }
 
   handleDrawStart = (e: React.MouseEvent | React.TouchEvent) => {
     // @ts-ignore
-    this.interactionSM = this.interactionSM.handleDrawStart(e, this);
-    this.mouseHasMoved = true;
-  };
+    this.interactionSM = this.interactionSM.handleDrawStart(e, this)
+    this.mouseHasMoved = true
+  }
 
   handleDrawMove = (e: React.MouseEvent | React.TouchEvent) => {
     // @ts-ignore
-    this.interactionSM = this.interactionSM.handleDrawMove(e, this);
-    this.mouseHasMoved = true;
-  };
+    this.interactionSM = this.interactionSM.handleDrawMove(e, this)
+    this.mouseHasMoved = true
+  }
 
   handleDrawEnd = (e: React.MouseEvent | React.TouchEvent) => {
     // @ts-ignore
-    this.interactionSM = this.interactionSM.handleDrawEnd(e, this);
-    this.mouseHasMoved = true;
-  };
+    this.interactionSM = this.interactionSM.handleDrawEnd(e, this)
+    this.mouseHasMoved = true
+  }
 
   applyView = () => {
     if (!this.ctx.drawing) {
-      return;
+      return
     }
 
     canvasTypes
       .map((name) => this.ctx[name])
       .forEach((ctx) => {
-        this.clearWindow(ctx);
-        const m = this.coordSystem.transformMatrix;
+        this.clearWindow(ctx)
+        const m = this.coordSystem.transformMatrix
         if (ctx) {
-          ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f);
+          ctx.setTransform(m.a, m.b, m.c, m.d, m.e, m.f)
         }
-      });
+      })
 
     if (!this.deferRedrawOnViewChange) {
       if (this.ctx.grid) {
-        this.drawGrid(this.ctx.grid);
+        this.drawGrid(this.ctx.grid)
       }
-      this.redrawImage();
-      this.loop({ once: true });
+      this.redrawImage()
+      this.loop({ once: true })
 
-      const lines = this.lines;
-      this.lines = [];
-      this.simulateDrawingLines({ lines, immediate: true });
+      const lines = this.lines
+      this.lines = []
+      this.simulateDrawingLines({ lines, immediate: true })
     }
-  };
+  }
 
   handleCanvasResize = (entries: ResizeObserverEntry[], _observer?: unknown) => {
-    const saveData = this.getSaveData();
-    this.deferRedrawOnViewChange = true;
+    const saveData = this.getSaveData()
+    this.deferRedrawOnViewChange = true
     try {
       for (const entry of entries) {
-        const { width, height } = entry.contentRect;
+        const { width, height } = entry.contentRect
         if (this.canvas.interface) {
-          this.setCanvasSize(this.canvas.interface, width, height);
+          this.setCanvasSize(this.canvas.interface, width, height)
         }
         if (this.canvas.drawing) {
-          this.setCanvasSize(this.canvas.drawing, width, height);
+          this.setCanvasSize(this.canvas.drawing, width, height)
         }
         if (this.canvas.temp) {
-          this.setCanvasSize(this.canvas.temp, width, height);
+          this.setCanvasSize(this.canvas.temp, width, height)
         }
         if (this.canvas.grid) {
-          this.setCanvasSize(this.canvas.grid, width, height);
+          this.setCanvasSize(this.canvas.grid, width, height)
         }
 
-        this.coordSystem.documentSize = { width, height };
-        this.drawGrid(this.ctx.grid);
-        this.drawImage();
-        this.loop({ once: true });
+        this.coordSystem.documentSize = { width, height }
+        this.drawGrid(this.ctx.grid)
+        this.drawImage()
+        this.loop({ once: true })
       }
-      this.loadSaveData(saveData, true);
+      this.loadSaveData(saveData, true)
     } finally {
-      this.deferRedrawOnViewChange = false;
+      this.deferRedrawOnViewChange = false
     }
-  };
+  }
 
   ///// Helpers
 
@@ -530,30 +532,34 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
       return {
         x: Math.max(Math.min(point.x, this.props.canvasWidth), 0),
         y: Math.max(Math.min(point.y, this.props.canvasHeight), 0),
-      };
+      }
     } else {
-      return point;
+      return point
     }
-  };
+  }
 
   redrawImage = () => {
-    this.image &&
-      this.image.complete &&
-      drawImage({ ctx: this.ctx.grid, img: this.image });
-  };
+    this.image && this.image.complete && drawImage({ ctx: this.ctx.grid, img: this.image })
+  }
 
-  simulateDrawingLines = ({ lines, immediate }: { lines: Line[] | undefined; immediate: boolean }) => {
+  simulateDrawingLines = ({
+    lines,
+    immediate,
+  }: {
+    lines: Line[] | undefined
+    immediate: boolean
+  }) => {
     // Simulate live-drawing of the loaded lines
     // TODO use a generator
-    let curTime = 0;
-    let timeoutGap = immediate ? 0 : this.props.loadTimeOffset;
+    let curTime = 0
+    let timeoutGap = immediate ? 0 : this.props.loadTimeOffset
 
     if (!lines) {
-      return;
+      return
     }
 
     lines.forEach((line) => {
-      const { points, brushColor, brushRadius } = line;
+      const { points, brushColor, brushRadius } = line
 
       // Draw all at once if immediate flag is set, instead of using setTimeout
       if (immediate) {
@@ -562,94 +568,102 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
           points,
           brushColor,
           brushRadius,
-        });
+        })
 
         // Save line with the drawn points
-        this.points = points;
-        this.saveLine({ brushColor, brushRadius });
-        return;
+        this.points = points
+        this.saveLine({ brushColor, brushRadius })
+        return
       }
 
       // Use timeout to draw
       for (let i = 1; i < points.length; i++) {
-        curTime += timeoutGap;
+        curTime += timeoutGap
         window.setTimeout(() => {
           this.drawPoints({
             points: points.slice(0, i + 1),
             brushColor,
             brushRadius,
-          });
-        }, curTime);
+          })
+        }, curTime)
       }
 
-      curTime += timeoutGap;
+      curTime += timeoutGap
       window.setTimeout(() => {
         // Save this line with its props instead of this.props
-        this.points = points;
-        this.saveLine({ brushColor, brushRadius });
-      }, curTime);
-    });
-  };
+        this.points = points
+        this.saveLine({ brushColor, brushRadius })
+      }, curTime)
+    })
+  }
 
   setCanvasSize = (canvas: HTMLCanvasElement, width: number, height: number) => {
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.width = width.toString() ;
-    canvas.style.height = height.toString();
-  };
+    canvas.width = width
+    canvas.height = height
+    canvas.style.width = width.toString()
+    canvas.style.height = height.toString()
+  }
 
-  drawPoints = ({ points, brushColor, brushRadius }: { points: Point[]; brushColor: string; brushRadius: number }) => {
+  drawPoints = ({
+    points,
+    brushColor,
+    brushRadius,
+  }: {
+    points: Point[]
+    brushColor: string
+    brushRadius: number
+  }) => {
     if (this.ctx.temp) {
-      this.ctx.temp.lineJoin = "round";
-      this.ctx.temp.lineCap = "round";
-      this.ctx.temp.strokeStyle = brushColor;
+      this.ctx.temp.lineJoin = 'round'
+      this.ctx.temp.lineCap = 'round'
+      this.ctx.temp.strokeStyle = brushColor
     }
 
-    this.clearWindow(this.ctx.temp);
+    this.clearWindow(this.ctx.temp)
     if (this.ctx.temp) {
-      this.ctx.temp.lineWidth = brushRadius * 2;
+      this.ctx.temp.lineWidth = brushRadius * 2
     }
 
-    let p1 = points[0];
-    let p2 = points[1];
+    let p1 = points[0]
+    let p2 = points[1]
 
     if (this.ctx.temp) {
-      this.ctx.temp.moveTo(p2.x, p2.y);
-      this.ctx.temp.beginPath();
+      this.ctx.temp.moveTo(p2.x, p2.y)
+      this.ctx.temp.beginPath()
     }
 
     for (var i = 1, len = points.length; i < len; i++) {
       // we pick the point between pi+1 & pi+2 as the
       // end point and p1 as our control point
-      var midPoint = midPointBtw(p1, p2);
+      var midPoint = midPointBtw(p1, p2)
       if (this.ctx.temp) {
-        this.ctx.temp.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y);
+        this.ctx.temp.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y)
       }
-      p1 = points[i];
-      p2 = points[i + 1];
+      p1 = points[i]
+      p2 = points[i + 1]
     }
     // Draw last line as a straight line while
     // we wait for the next point to be able to calculate
     // the bezier control point
     if (this.ctx.temp) {
-      this.ctx.temp.lineTo(p1.x, p1.y);
-      this.ctx.temp.stroke();
+      this.ctx.temp.lineTo(p1.x, p1.y)
+      this.ctx.temp.stroke()
     }
-  };
+  }
 
   saveLine = (params?: { brushColor: string; brushRadius: number }) => {
-    const { brushColor, brushRadius } = params || {};
-    if (this.points.length < 2) return;
+    const { brushColor, brushRadius } = params || {}
+    if (this.points.length < 2) return
 
     // Save as new line
     this.lines.push({
       points: [...this.points],
       brushColor: brushColor || this.props.brushColor,
       brushRadius: brushRadius || this.props.brushRadius,
-    });
+    })
 
     // Reset points array
-    this.points.length = 0;
+    this.points.length = 0
 
     // Copy the line to the drawing canvas
     this.inClientSpace([this.ctx.drawing, this.ctx.temp], () => {
@@ -659,20 +673,20 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
           0,
           0,
           this.canvas.drawing ? this.canvas.drawing.width || NaN : NaN,
-          this.canvas.drawing ? this.canvas.drawing.height || NaN : NaN
-        );
-      } 
-    });
+          this.canvas.drawing ? this.canvas.drawing.height || NaN : NaN,
+        )
+      }
+    })
 
     // Clear the temporary line-drawing canvas
-    this.clearWindow(this.ctx.temp);
+    this.clearWindow(this.ctx.temp)
 
-    this.triggerOnChange();
-  };
+    this.triggerOnChange()
+  }
 
   triggerOnChange = () => {
-    this.props.onChange && this.props.onChange(this);
-  };
+    this.props.onChange && this.props.onChange(this)
+  }
 
   clearWindow = (ctx?: CanvasRenderingContext2D | null) => {
     this.inClientSpace([ctx], () => {
@@ -680,165 +694,164 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
         return
       }
       return ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-    }
-    );
-  };
+    })
+  }
 
   clearExceptErasedLines = () => {
-    this.lines = [];
-    this.valuesChanged = true;
-    this.clearWindow(this.ctx.drawing);
-    this.clearWindow(this.ctx.temp);
-  };
+    this.lines = []
+    this.valuesChanged = true
+    this.clearWindow(this.ctx.drawing)
+    this.clearWindow(this.ctx.temp)
+  }
 
   loop = ({ once = false } = {}) => {
     if (this.mouseHasMoved || this.valuesChanged) {
       if (this.lazy) {
-        const pointer = this.lazy.getPointerCoordinates();
-        const brush = this.lazy.getBrushCoordinates();
-        this.drawInterface(this.ctx.interface, pointer, brush);
-        this.mouseHasMoved = false;
-        this.valuesChanged = false;
+        const pointer = this.lazy.getPointerCoordinates()
+        const brush = this.lazy.getBrushCoordinates()
+        this.drawInterface(this.ctx.interface, pointer, brush)
+        this.mouseHasMoved = false
+        this.valuesChanged = false
       }
     }
 
     if (!once) {
       window.requestAnimationFrame(() => {
-        this.loop();
-      });
+        this.loop()
+      })
     }
-  };
+  }
 
-  inClientSpace = (ctxs: Array<CanvasRenderingContext2D | null | undefined>, action: () => void) => {
+  inClientSpace = (
+    ctxs: Array<CanvasRenderingContext2D | null | undefined>,
+    action: () => void,
+  ) => {
     ctxs.forEach((ctx) => {
       if (ctx) {
-        ctx.save();
-        ctx.setTransform(
-        IDENTITY.a,
-        IDENTITY.b,
-        IDENTITY.c,
-        IDENTITY.d,
-        IDENTITY.e,
-        IDENTITY.f
-        );
+        ctx.save()
+        ctx.setTransform(IDENTITY.a, IDENTITY.b, IDENTITY.c, IDENTITY.d, IDENTITY.e, IDENTITY.f)
       }
-    });
+    })
 
     try {
-      action();
+      action()
     } finally {
       ctxs.forEach((ctx) => {
         if (ctx) {
-          ctx.restore();
+          ctx.restore()
         }
-      });
+      })
     }
-  };
+  }
 
   ///// Canvas Rendering
 
   drawImage = () => {
-    if (!this.props.imgSrc) return;
+    if (!this.props.imgSrc) return
 
     // Load the image
-    this.image = new Image();
+    this.image = new Image()
 
     // Prevent SecurityError "Tainted canvases may not be exported." #70
-    this.image.crossOrigin = "anonymous";
+    this.image.crossOrigin = 'anonymous'
 
     // Draw the image once loaded
-    this.image.onload = this.redrawImage;
-    this.image.src = this.props.imgSrc;
-  };
+    this.image.onload = this.redrawImage
+    this.image.src = this.props.imgSrc
+  }
 
   drawGrid = (ctx?: CanvasRenderingContext2D | null) => {
-    if (this.props.hideGrid) return;
+    if (this.props.hideGrid) return
 
-    this.clearWindow(ctx);
+    this.clearWindow(ctx)
     if (ctx == null) {
       return
     }
 
-    const gridSize = 25;
-    const bounds = this.coordSystem.canvasBounds;
-    const viewMin = bounds ? bounds.viewMin : { x: NaN, y: NaN };
-    const viewMax = bounds ? bounds.viewMax : { x: NaN, y: NaN };
-    const minx = Math.floor(viewMin.x / gridSize - 1) * gridSize;
-    const miny = Math.floor(viewMin.y / gridSize - 1) * gridSize;
-    const maxx = viewMax.x + gridSize;
-    const maxy = viewMax.y + gridSize;
+    const gridSize = 25
+    const bounds = this.coordSystem.canvasBounds
+    const viewMin = bounds ? bounds.viewMin : { x: NaN, y: NaN }
+    const viewMax = bounds ? bounds.viewMax : { x: NaN, y: NaN }
+    const minx = Math.floor(viewMin.x / gridSize - 1) * gridSize
+    const miny = Math.floor(viewMin.y / gridSize - 1) * gridSize
+    const maxx = viewMax.x + gridSize
+    const maxy = viewMax.y + gridSize
 
-    ctx.beginPath();
-    ctx.setLineDash([5, 1]);
-    ctx.setLineDash([]);
-    ctx.strokeStyle = this.props.gridColor;
-    ctx.lineWidth = this.props.gridLineWidth;
+    ctx.beginPath()
+    ctx.setLineDash([5, 1])
+    ctx.setLineDash([])
+    ctx.strokeStyle = this.props.gridColor
+    ctx.lineWidth = this.props.gridLineWidth
 
     if (!this.props.hideGridX) {
-      let countX = minx;
-      const gridSizeX = this.props.gridSizeX;
+      let countX = minx
+      const gridSizeX = this.props.gridSizeX
       while (countX < maxx) {
-        countX += gridSizeX;
-        ctx.moveTo(countX, miny);
-        ctx.lineTo(countX, maxy);
+        countX += gridSizeX
+        ctx.moveTo(countX, miny)
+        ctx.lineTo(countX, maxy)
       }
-      ctx.stroke();
+      ctx.stroke()
     }
 
     if (!this.props.hideGridY) {
-      let countY = miny;
-      const gridSizeY = this.props.gridSizeY;
+      let countY = miny
+      const gridSizeY = this.props.gridSizeY
       while (countY < maxy) {
-        countY += gridSizeY;
-        ctx.moveTo(minx, countY);
-        ctx.lineTo(maxx, countY);
+        countY += gridSizeY
+        ctx.moveTo(minx, countY)
+        ctx.lineTo(maxx, countY)
       }
-      ctx.stroke();
+      ctx.stroke()
     }
-  };
+  }
 
-  drawInterface = (ctx: CanvasRenderingContext2D | null | undefined, pointer: Point, brush: Point) => {
-    if (this.props.hideInterface) return;
+  drawInterface = (
+    ctx: CanvasRenderingContext2D | null | undefined,
+    pointer: Point,
+    brush: Point,
+  ) => {
+    if (this.props.hideInterface) return
     if (ctx == null) {
       return
     }
 
-    this.clearWindow(ctx);
+    this.clearWindow(ctx)
 
     // Draw brush preview
-    ctx.beginPath();
-    ctx.fillStyle = this.props.brushColor;
-    ctx.arc(brush.x, brush.y, this.props.brushRadius, 0, Math.PI * 2, true);
-    ctx.fill();
+    ctx.beginPath()
+    ctx.fillStyle = this.props.brushColor
+    ctx.arc(brush.x, brush.y, this.props.brushRadius, 0, Math.PI * 2, true)
+    ctx.fill()
 
     // Draw mouse point (the one directly at the cursor)
-    ctx.beginPath();
-    ctx.fillStyle = this.props.catenaryColor;
-    ctx.arc(pointer.x, pointer.y, 4, 0, Math.PI * 2, true);
-    ctx.fill();
+    ctx.beginPath()
+    ctx.fillStyle = this.props.catenaryColor
+    ctx.arc(pointer.x, pointer.y, 4, 0, Math.PI * 2, true)
+    ctx.fill()
 
     // Draw catenary
     if (this.lazy) {
       if (this.lazy.isEnabled()) {
-        ctx.beginPath();
-        ctx.lineWidth = 2;
-        ctx.lineCap = "round";
-        ctx.setLineDash([2, 4]);
-        ctx.strokeStyle = this.props.catenaryColor;
+        ctx.beginPath()
+        ctx.lineWidth = 2
+        ctx.lineCap = 'round'
+        ctx.setLineDash([2, 4])
+        ctx.strokeStyle = this.props.catenaryColor
         // this.catenary.drawToCanvas(
         //   this.ctx.interface,
         //   brush,
         //   pointer,
         //   this.chainLength
         // );
-        ctx.stroke();
+        ctx.stroke()
       }
     }
 
     // Draw brush point (the one in the middle of the brush preview)
-    ctx.beginPath();
-    ctx.fillStyle = this.props.catenaryColor;
-    ctx.arc(brush.x, brush.y, 2, 0, Math.PI * 2, true);
-    ctx.fill();
-  };
+    ctx.beginPath()
+    ctx.fillStyle = this.props.catenaryColor
+    ctx.arc(brush.x, brush.y, 2, 0, Math.PI * 2, true)
+    ctx.fill()
+  }
 }

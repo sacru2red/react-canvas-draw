@@ -12,4 +12,3 @@
   "include": ["type-source/**/*"],
   "exclude": ["node_modules", "es", "lib", "umd", "demo", "tests"]
 }
-

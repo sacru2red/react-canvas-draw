@@ -29,11 +29,11 @@ yarn add react-canvas-draw
 ## Usage
 
 ```javascript
-import React from "react";
-import ReactDOM from "react-dom";
-import CanvasDraw from "react-canvas-draw";
+import React from 'react'
+import ReactDOM from 'react-dom'
+import CanvasDraw from 'react-canvas-draw'
 
-ReactDOM.render(<CanvasDraw />, document.getElementById("root"));
+ReactDOM.render(<CanvasDraw />, document.getElementById('root'))
 ```
 
 For more examples, like saving and loading a drawing ==> look into the [`/demo/src` folder](https://github.com/embiem/react-canvas-draw/tree/master/demo/src).
