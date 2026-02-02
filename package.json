@@ -29,7 +29,9 @@
     "deploy": "npm run build:demo && gh-pages -d demo/dist",
     "contributors:add": "all-contributors add",
     "contributors:generate": "all-contributors generate",
-    "prepare": "npm run build",
+    "prepare": "husky",
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run build",
     "release": "npx release-it",
     "tsc": "tsc -p tsconfig.types.json"
   },
@@ -47,7 +49,9 @@
     "@vitest/coverage-v8": "^4.0.18",
     "all-contributors-cli": "^6.15.0",
     "gh-pages": "^1.1.0",
+    "husky": "^9.1.7",
     "jsdom": "^24.0.0",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.6.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -56,6 +60,11 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.1",
     "vitest": "^4.0.18"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,css,md,json,yml,yaml,html}": [
+      "prettier --write"
+    ]
   },
   "author": {
     "name": "sacu2red",
