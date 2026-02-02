@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "declarationMap": false,
+    "outDir": "./type",
+    "declarationDir": "./type",
+    "lib": ["dom", "es2015"]
+  },
+  "include": ["type-source/**/*"],
+  "exclude": ["node_modules", "es", "lib", "umd", "demo", "tests"]
+}
+

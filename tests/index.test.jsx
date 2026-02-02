@@ -1,8 +1,7 @@
-import expect from "expect";
 import React from "react";
 import { render, unmountComponentAtNode } from "react-dom";
 
-import CanvasDraw from "../src/index";
+import CanvasDraw from "../type-source";
 
 describe("DrawCanvas", () => {
   let node;
@@ -29,3 +28,4 @@ describe("DrawCanvas", () => {
     });
   });
 });
+

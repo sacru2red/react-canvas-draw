@@ -1,5 +1,7 @@
 import { Extents, Size } from "./types";
 
+type View = { scale: number; x: number; y: number };
+
 /**
  * @type {ViewPoint}
  */
@@ -103,7 +105,7 @@ export default class CoordinateSystem {
     * @type {ViewListener[]}
     * @private
     */
-   _viewChangeListeners = new Set<Function>();
+   _viewChangeListeners = new Set<(view: View) => void>();
 
   /**
    * @returns {Canvas} the canvas currently associated with this instance.
@@ -164,7 +166,7 @@ export default class CoordinateSystem {
    * updates the view.
    * @param {number} y the new offset
    */
-  set y(y) {
+  set y(y: number) {
     this.setView({ y });
   }
 
@@ -332,7 +334,7 @@ export default class CoordinateSystem {
     // Only trigger if the view actually changed.
     if (newView.scale !== scale || newView.x !== x || newView.y !== y) {
       this._view = newView;
-      this._viewChangeListeners.forEach(listener => listener && listener(newView));
+      this._viewChangeListeners.forEach((listener) => listener && listener(newView));
     }
 
     return { ...this._view };
@@ -436,7 +438,7 @@ export default class CoordinateSystem {
    * transform changes.
    * @param {ViewListener} listener the callback to execute.
    */
-  attachViewChangeListener = (listener: Function) => {
+  attachViewChangeListener = (listener: (view: View) => void) => {
     this._viewChangeListeners.add(listener);
   };
 }

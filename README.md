@@ -84,9 +84,11 @@ Useful functions that you can call, e.g. when having a reference to this compone
 
 ## Local Development
 
-This repo was kickstarted by nwb's awesome [react-component starter](https://github.com/insin/nwb/blob/master/docs/guides/ReactComponents.md#developing-react-components-and-libraries-with-nwb).
+이 프로젝트는 현재 **Vite** 기반으로 로컬 개발/데모를 실행합니다.
 
-You just need to clone it, yarn it & start it!
+- `npm install`
+- `npm start` (demo 개발 서버)
+- `npm run build` (라이브러리 빌드: `es/`, `lib/`, `umd/` + 타입 `type/`)
 
 ## Tips
 
