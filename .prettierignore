@@ -1,0 +1,13 @@
+node_modules
+coverage
+
+# build outputs
+es
+lib
+umd
+type
+demo/dist
+
+# lockfiles are ok to format-check, but don't rewrite automatically
+package-lock.json
+

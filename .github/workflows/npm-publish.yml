@@ -17,7 +17,7 @@ jobs:
       - name: Checkout 🛎️
         uses: actions/checkout@v2
 
-      - name: Install and Build 🔧 
+      - name: Install and Build 🔧
         run: |
           npm install
           npm run build
@@ -27,7 +27,7 @@ jobs:
         with:
           branch: gh-pages # The branch the action should deploy to.
           folder: demo/dist # The folder the action should deploy.
-          
+
   publish-npm:
     runs-on: ubuntu-latest
     steps:
@@ -35,8 +35,8 @@ jobs:
       # Setup .npmrc file to publish to npm
       - uses: actions/setup-node@v2
         with:
-          node-version: "12.x"
-          registry-url: "https://registry.npmjs.org"
+          node-version: '12.x'
+          registry-url: 'https://registry.npmjs.org'
       - run: npm install
       - run: npm publish
         env:
