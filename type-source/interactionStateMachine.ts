@@ -1,4 +1,4 @@
-import CanvasDraw from '.'
+import type { CanvasDrawApi } from './types'
 
 const TOUCH_SLOP = 10
 const PINCH_TIMEOUT_MS = 250
@@ -48,7 +48,7 @@ export class DefaultState {
   //   }
   //   return this;
   // };
-  handleMouseWheel(e: WheelEvent, canvasDraw: CanvasDraw): DisabledState | DefaultState {
+  handleMouseWheel(e: WheelEvent, canvasDraw: CanvasDrawApi): DisabledState | DefaultState {
     const { disabled, enablePanAndZoom, mouseZoomFactor } = canvasDraw.props
     if (disabled) {
       return new DisabledState()
@@ -59,7 +59,7 @@ export class DefaultState {
     return this
   }
 
-  handleDrawStart = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDraw) => {
+  handleDrawStart = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi) => {
     if (canvasDraw.props.disabled) {
       return new DisabledState()
     } else if (e instanceof MouseEvent && e.ctrlKey && canvasDraw.props.enablePanAndZoom) {
@@ -70,7 +70,7 @@ export class DefaultState {
 
   handleDrawMove = (
     e: MouseEvent | TouchEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DefaultState | DisabledState => {
     if (canvasDraw.props.disabled) {
       return new DisabledState()
@@ -85,14 +85,14 @@ export class DefaultState {
 
   handleDrawEnd = (
     e: MouseEvent | TouchEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DefaultState | DisabledState => {
     return canvasDraw.props.disabled ? new DisabledState() : this
   }
 }
 
 export class DisabledState {
-  handleMouseWheel(e: WheelEvent, canvasDraw: CanvasDraw): DisabledState | DefaultState {
+  handleMouseWheel(e: WheelEvent, canvasDraw: CanvasDrawApi): DisabledState | DefaultState {
     if (canvasDraw.props.disabled) {
       return this
     }
@@ -101,7 +101,7 @@ export class DisabledState {
 
   handleDrawStart = (
     e: MouseEvent | TouchEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ):
     | DisabledState
     | DefaultState
@@ -119,7 +119,7 @@ export class DisabledState {
 
   handleDrawMove = (
     e: MouseEvent | TouchEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DisabledState | DefaultState => {
     if (canvasDraw.props.disabled) {
       return this
@@ -130,7 +130,7 @@ export class DisabledState {
 
   handleDrawEnd = (
     e: MouseEvent | TouchEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DisabledState | DefaultState => {
     if (canvasDraw.props.disabled) {
       return this
@@ -151,7 +151,7 @@ export class PanState {
 
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
 
-  handleDrawStart = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDraw): PanState => {
+  handleDrawStart = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi): PanState => {
     e.preventDefault()
 
     this.dragStart = clientPointFromEvent(e)
@@ -160,7 +160,7 @@ export class PanState {
     return this
   }
 
-  handleDrawMove = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDraw): PanState => {
+  handleDrawMove = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi): PanState => {
     e.preventDefault()
 
     const { clientX, clientY } = clientPointFromEvent(e)
@@ -189,7 +189,7 @@ export class WaitForPinchState {
 
   handleDrawStart = (
     e: MouseEvent | TouchEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DefaultState | DrawingState | ScaleOrPanState | WaitForPinchState => {
     const { enablePanAndZoom } = canvasDraw.props
     e.preventDefault()
@@ -210,7 +210,7 @@ export class WaitForPinchState {
 
   handleDrawMove = (
     e: TouchEvent | MouseEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DefaultState | WaitForPinchState | DrawingState | ScaleOrPanState => {
     e.preventDefault()
 
@@ -240,11 +240,11 @@ export class WaitForPinchState {
     return this.issueDeferredPoints(canvasDraw)
   }
 
-  handleDrawEnd = (e: TouchEvent, canvasDraw: CanvasDraw): DefaultState | DisabledState => {
+  handleDrawEnd = (e: TouchEvent, canvasDraw: CanvasDrawApi): DefaultState | DisabledState => {
     return this.issueDeferredPoints(canvasDraw).handleDrawEnd(e, canvasDraw)
   }
 
-  issueDeferredPoints = (canvasDraw: CanvasDraw): DefaultState | DrawingState => {
+  issueDeferredPoints = (canvasDraw: CanvasDrawApi): DefaultState | DrawingState => {
     let nextState: DrawingState = new DrawingState()
     for (let i = 0; i < this.deferredPoints.length; i++) {
       const deferredPt = this.deferredPoints[i]
@@ -282,7 +282,7 @@ export class ScaleOrPanState {
 
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
 
-  handleDrawStart = (e: TouchEvent, canvasDraw: CanvasDraw): ScaleOrPanState | DefaultState => {
+  handleDrawStart = (e: TouchEvent, canvasDraw: CanvasDrawApi): ScaleOrPanState | DefaultState => {
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
@@ -295,7 +295,7 @@ export class ScaleOrPanState {
 
   handleDrawMove = (
     e: TouchEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): ScaleOrPanState | TouchPanState | TouchScaleState | DefaultState => {
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
@@ -354,7 +354,7 @@ export class TouchPanState {
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
   handleDrawStart = (): TouchPanState => this
 
-  handleDrawMove = (e: TouchEvent, canvasDraw: CanvasDraw): TouchPanState | DefaultState => {
+  handleDrawMove = (e: TouchEvent, canvasDraw: CanvasDrawApi): TouchPanState | DefaultState => {
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
@@ -384,7 +384,7 @@ export class TouchScaleState {
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
   handleDrawStart = (): TouchScaleState => this
 
-  handleDrawMove = (e: TouchEvent, canvasDraw: CanvasDraw): TouchScaleState | DefaultState => {
+  handleDrawMove = (e: TouchEvent, canvasDraw: CanvasDrawApi): TouchScaleState | DefaultState => {
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
@@ -414,7 +414,7 @@ export class DrawingState {
 
   handleDrawStart = (
     e: MouseEvent | TouchEvent | SyntheticEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DrawingState => {
     e.preventDefault()
 
@@ -430,7 +430,7 @@ export class DrawingState {
 
   handleDrawMove = (
     e: MouseEvent | TouchEvent | SyntheticEvent,
-    canvasDraw: CanvasDraw,
+    canvasDraw: CanvasDrawApi,
   ): DrawingState => {
     e.preventDefault()
 
@@ -460,7 +460,7 @@ export class DrawingState {
     return this
   }
 
-  handleDrawEnd = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDraw): DefaultState => {
+  handleDrawEnd = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi): DefaultState => {
     e.preventDefault()
 
     this.handleDrawMove(e, canvasDraw)
