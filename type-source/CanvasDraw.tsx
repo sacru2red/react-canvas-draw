@@ -89,7 +89,6 @@ type CanvasDrawRuntime = CanvasDrawApi & {
   interactionSM: InteractionState
   chainLength?: number
   canvasObserver?: ResizeObserver
-  canvasContainer?: HTMLDivElement | null
   image?: HTMLImageElement
   redrawImage: () => void
   drawImage: () => void

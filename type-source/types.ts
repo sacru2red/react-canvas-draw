@@ -144,6 +144,11 @@ export interface CanvasDrawApi {
   props: ResolvedCanvasDrawProps
   coordSystem: CoordinateSystemApi
   lazy?: LazyBrushApi
+  /**
+   * 캔버스를 감싸는 컨테이너 엘리먼트.
+   * 내부 런타임에서 설정되며, 외부(ref/onChange)에서도 읽을 수 있다.
+   */
+  canvasContainer?: HTMLDivElement | null
 
   canvas: Partial<Record<CanvasTypes, HTMLCanvasElement | null | undefined>>
   ctx: Partial<Record<CanvasTypes, CanvasRenderingContext2D | undefined>>
