@@ -2,13 +2,13 @@
 <h1>React Canvas Draw</h1>
 </div>
 
-> A simple yet powerful canvas-drawing component for React ([Demo](https://embiem.github.io/react-canvas-draw/))
+> A simple yet powerful canvas-drawing component for React ([Demo](https://sacru2red.github.io/react-canvas-draw/))
 
-[![Travis][build-badge]][build] [![Coveralls][coveralls-badge]][coveralls] [![npm package][npm-badge]][npm] [![downloads][downloads-badge]][npmtrends] [![MIT License][license-badge]][license]
+[![npm package][npm-badge]][npm] [![downloads][downloads-badge]][npmtrends] [![MIT License][license-badge]][license]
 
 [![All Contributors](https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square)](#contributors) [![PRs Welcome][prs-badge]][prs]
 
-[![Watch on GitHub][github-watch-badge]][github-watch] [![Star on GitHub][github-star-badge]][github-star] [![Tweet][twitter-badge]][twitter]
+[![Watch on GitHub][github-watch-badge]][github-watch] [![Star on GitHub][github-star-badge]][github-star]
 
 [![Edit 6lv410914w](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/6lv410914w)
 
@@ -36,11 +36,11 @@ import CanvasDraw from 'react-canvas-draw'
 ReactDOM.render(<CanvasDraw />, document.getElementById('root'))
 ```
 
-For more examples, like saving and loading a drawing ==> look into the [`/demo/src` folder](https://github.com/embiem/react-canvas-draw/tree/master/demo/src).
+For more examples, like saving and loading a drawing ==> look into the [`/demo/src` folder](https://github.com/sacru2red/react-canvas-draw/tree/main/demo/src).
 
 ### Props
 
-These are the defaultProps of CanvasDraw. You can pass along any of these props to customize the CanvasDraw component. Examples of how to use the props are also shown in the [`/demo/src` folder](https://github.com/embiem/react-canvas-draw/tree/master/demo/src).
+These are the defaultProps of CanvasDraw. You can pass along any of these props to customize the CanvasDraw component. Examples of how to use the props are also shown in the [`/demo/src` folder](https://github.com/sacru2red/react-canvas-draw/tree/main/demo/src).
 
 ```javascript
   static defaultProps = {
@@ -87,7 +87,7 @@ Useful functions that you can call, e.g. when having a reference to this compone
 이 프로젝트는 현재 **Vite** 기반으로 로컬 개발/데모를 실행합니다.
 
 - `npm install`
-- `npm start` (demo 개발 서버)
+- `npm run dev` (demo 개발 서버)
 - `npm run build` (라이브러리 빌드: `es/`, `lib/`, `umd/` + 타입 `type/`)
 
 ## Tips
@@ -102,38 +102,22 @@ I borrowed a lot of the logic and actually used lazy-brush during the push to v1
 
 ## Contributors
 
-Thanks goes to these wonderful people ([emoji key](https://github.com/kentcdodds/all-contributors#emoji-key)):
-
-<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
-<!-- prettier-ignore -->
-| [<img src="https://avatars3.githubusercontent.com/u/3866457?v=4" width="100px;"/><br /><sub><b>Martin Beierling-Mutz</b></sub>](https://embiem.me)<br />[💻](https://github.com/embiem/react-canvas-draw/commits?author=embiem "Code") [📖](https://github.com/embiem/react-canvas-draw/commits?author=embiem "Documentation") [💡](#example-embiem "Examples") [🤔](#ideas-embiem "Ideas, Planning, & Feedback") | [<img src="https://avatars0.githubusercontent.com/u/4155003?v=4" width="100px;"/><br /><sub><b>Jan Hug</b></sub>](http://www.janhug.info)<br />[🤔](#ideas-dulnan "Ideas, Planning, & Feedback") |
-| :---: | :---: |
-
-<!-- ALL-CONTRIBUTORS-LIST:END -->
-
 This project follows the [all-contributors](https://github.com/kentcdodds/all-contributors) specification. Contributions of any kind welcome!
 
 ## License
 
-MIT, see [LICENSE](https://github.com/embiem/react-canvas-draw/blob/master/LICENSE) for details.
+MIT, see [LICENSE](https://github.com/sacru2red/react-canvas-draw/blob/main/LICENSE) for details.
 
-[build-badge]: https://img.shields.io/travis/embiem/react-canvas-draw/master.png?style=flat-square
-[build]: https://travis-ci.org/embiem/react-canvas-draw
 [npm-badge]: https://img.shields.io/npm/v/react-canvas-draw.png?style=flat-square
 [npm]: https://www.npmjs.org/package/react-canvas-draw
-[coveralls-badge]: https://img.shields.io/coveralls/embiem/react-canvas-draw/master.png?style=flat-square
-[coveralls]: https://coveralls.io/github/embiem/react-canvas-draw
-[npm]: https://www.npmjs.com/
 [node]: https://nodejs.org
 [downloads-badge]: https://img.shields.io/npm/dm/react-canvas-draw.svg?style=flat-square
 [npmtrends]: http://www.npmtrends.com/react-canvas-draw
 [license-badge]: https://img.shields.io/npm/l/react-canvas-draw.svg?style=flat-square
-[license]: https://github.com/embiem/react-canvas-draw/blob/master/LICENSE
+[license]: https://github.com/sacru2red/react-canvas-draw/blob/main/LICENSE
 [prs-badge]: https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square
 [prs]: http://makeapullrequest.com
-[github-watch-badge]: https://img.shields.io/github/watchers/embiem/react-canvas-draw.svg?style=social
-[github-watch]: https://github.com/embiem/react-canvas-draw/watchers
-[github-star-badge]: https://img.shields.io/github/stars/embiem/react-canvas-draw.svg?style=social
-[github-star]: https://github.com/embiem/react-canvas-draw/stargazers
-[twitter]: https://twitter.com/intent/tweet?text=Check%20out%20react-canvas-draw%20by%20%40em_bi_em%20https%3A%2F%2Fgithub.com%2Fembiem%2Freact-canvas-draw%20%F0%9F%91%8D
-[twitter-badge]: https://img.shields.io/twitter/url/https/github.com/embiem/react-canvas-draw.svg?style=social
+[github-watch-badge]: https://img.shields.io/github/watchers/sacru2red/react-canvas-draw.svg?style=social
+[github-watch]: https://github.com/sacru2red/react-canvas-draw/watchers
+[github-star-badge]: https://img.shields.io/github/stars/sacru2red/react-canvas-draw.svg?style=social
+[github-star]: https://github.com/sacru2red/react-canvas-draw/stargazers
