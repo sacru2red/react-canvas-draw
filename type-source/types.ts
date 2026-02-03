@@ -3,6 +3,82 @@ export interface Point {
   y: number
 }
 
+export interface CoordinateSystemView {
+  scale: number
+  x: number
+  y: number
+}
+
+export interface CoordinateSystemMatrix {
+  a: number
+  b: number
+  c: number
+  d: number
+  e: number
+  f: number
+}
+
+export interface CoordinateSystemViewPoint {
+  x: number
+  y: number
+  relativeClientX: number
+  relativeClientY: number
+}
+
+export interface CoordinateSystemCanvasBounds {
+  left: number
+  top: number
+  right: number
+  bottom: number
+  canvasWidth: number
+  canvasHeight: number
+  viewMin: CoordinateSystemViewPoint
+  viewMax: CoordinateSystemViewPoint
+}
+
+/**
+ * `coordinateSystem.ts`의 `CoordinateSystem`을 위한 최소(구조적) 타입.
+ *
+ * 주의: `coordinateSystem.ts`가 이 파일의 `Extents`, `Size`를 import하므로,
+ * 여기서 `CoordinateSystem` 클래스를 import하면 순환 의존성이 생길 수 있다.
+ */
+export interface CoordinateSystemApi {
+  canvas: HTMLCanvasElement | null
+  readonly transformMatrix: CoordinateSystemMatrix
+  readonly canvasBounds: CoordinateSystemCanvasBounds | undefined
+
+  scale: number
+  x: number
+  y: number
+  scaleExtents: Extents
+  documentSize: Size
+
+  resetView: () => void
+  setView: (view?: Partial<CoordinateSystemView>) => CoordinateSystemView
+  scaleAtClientPoint: (
+    deltaScale: number,
+    clientPoint: { clientX: number; clientY: number },
+  ) => CoordinateSystemView
+  clientPointToViewPoint: (
+    clientPoint: { clientX: number; clientY: number },
+    view?: CoordinateSystemView,
+  ) => CoordinateSystemViewPoint
+  attachViewChangeListener: (listener: (view: CoordinateSystemView) => void) => void
+}
+
+/**
+ * `lazy-brush`의 `LazyBrush`를 위한 최소(구조적) 타입.
+ * 실제 구현체에 의존하지 않도록 여기서는 필요한 멤버만 노출한다.
+ */
+export interface LazyBrushApi {
+  brush: { toObject: () => Point }
+  isEnabled: () => boolean
+  update: (point: Point, options?: { both?: boolean }) => void
+  setRadius: (radius: number) => void
+  getPointerCoordinates: () => Point
+  getBrushCoordinates: () => Point
+}
+
 export interface Line {
   points: Point[]
   brushColor: string
@@ -10,7 +86,7 @@ export interface Line {
 }
 
 export interface CanvasDrawProps {
-  onChange: Function
+  onChange?: (api: CanvasDrawApi) => void
   loadTimeOffset: number
   lazyRadius: number
   brushRadius: number
@@ -57,8 +133,8 @@ export interface Size {
  */
 export interface CanvasDrawApi {
   props: CanvasDrawProps
-  coordSystem: any
-  lazy?: any
+  coordSystem: CoordinateSystemApi
+  lazy?: LazyBrushApi
 
   canvas: Partial<Record<CanvasTypes, HTMLCanvasElement | null | undefined>>
   ctx: Partial<Record<CanvasTypes, CanvasRenderingContext2D | undefined>>
@@ -76,8 +152,8 @@ export interface CanvasDrawApi {
   undo: () => void
   eraseAll: () => void
   clear: () => void
-  resetView: () => any
-  setView: (view: object) => any
+  resetView: () => void
+  setView: (view?: Partial<CoordinateSystemView>) => CoordinateSystemView
 
   getSaveData: () => string
   getDataURL: (fileType: string, useBgImage: boolean, backgroundColour: string) => string

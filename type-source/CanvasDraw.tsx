@@ -13,7 +13,16 @@ import {
   WaitForPinchState,
 } from './interactionStateMachine'
 import makePassiveEventOption from './makePassiveEventOption'
-import { CanvasDrawApi, CanvasDrawProps, Line, Point } from './types'
+import { CanvasDrawApi, CanvasDrawProps, CoordinateSystemView, Line, Point } from './types'
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isPointLike(value: unknown): value is Point {
+  if (!isRecord(value)) return false
+  return typeof value.x === 'number' && typeof value.y === 'number'
+}
 
 function midPointBtw(p1: Point, p2: Point) {
   return {
@@ -31,7 +40,7 @@ const canvasStyle: React.CSSProperties = {
 const canvasTypes = ['grid', 'drawing', 'temp', 'interface'] as const
 
 const DEFAULT_PROPS: CanvasDrawProps = {
-  onChange: null as any,
+  onChange: undefined,
   loadTimeOffset: 5,
   lazyRadius: 12,
   brushRadius: 10,
@@ -125,7 +134,7 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
       eraseAll: () => {},
       clear: () => {},
       resetView: () => {},
-      setView: () => {},
+      setView: (_view?: Partial<CoordinateSystemView>) => ({ scale: 1, x: 0, y: 0 }),
       getSaveData: () => '',
       getDataURL: () => '',
       loadSaveData: () => {},
@@ -149,7 +158,7 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
     }
   }
 
-  const api = apiRef.current
+  const api = apiRef.current!
   api.props = props
 
   const rafIdRef = useRef<number | null>(null)
@@ -162,8 +171,9 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
 
   const triggerOnChange = useCallback(() => {
     const onChange = apiRef.current?.props?.onChange
-    if (onChange) {
-      onChange(apiRef.current)
+    const runtime = apiRef.current
+    if (onChange && runtime) {
+      onChange(runtime)
     }
   }, [])
 
@@ -541,15 +551,11 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
   )
 
   const resetView = useCallback(() => {
-    const p = apiRef.current
-    if (!p) return
-    return p.coordSystem.resetView()
+    apiRef.current!.coordSystem.resetView()
   }, [])
 
-  const setView = useCallback((view: object) => {
-    const p = apiRef.current
-    if (!p) return
-    return p.coordSystem.setView(view)
+  const setView = useCallback((view?: Partial<CoordinateSystemView>) => {
+    return apiRef.current!.coordSystem.setView(view)
   }, [])
 
   const getSaveData = useCallback(() => {
@@ -606,9 +612,19 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
         throw new Error('saveData needs to be of type string!')
       }
 
-      const { lines, width, height } = JSON.parse(saveData)
-      if (!lines || typeof lines.push !== 'function' || !Array.isArray(lines)) {
+      const parsed: unknown = JSON.parse(saveData)
+      if (!isRecord(parsed)) {
+        throw new Error('saveData needs to be a JSON object!')
+      }
+
+      const lines = parsed.lines
+      const width = parsed.width
+      const height = parsed.height
+      if (!Array.isArray(lines)) {
         throw new Error('saveData.lines needs to be an array!')
+      }
+      if (typeof width !== 'number' || typeof height !== 'number') {
+        throw new Error('saveData.width/height need to be numbers!')
       }
 
       p.clear()
@@ -623,9 +639,9 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
         simulateDrawingLines({
           lines: lines.map((line: Line) => ({
             ...line,
-            points: line.points.map((pt: any) => ({
-              x: pt && typeof pt === 'object' && 'x' in pt ? pt.x * scaleX : NaN,
-              y: pt && typeof pt === 'object' && 'y' in pt ? pt.y * scaleY : NaN,
+            points: line.points.map((pt: unknown) => ({
+              x: isPointLike(pt) ? pt.x * scaleX : NaN,
+              y: isPointLike(pt) ? pt.y * scaleY : NaN,
             })),
             brushRadius: line.brushRadius * scaleAvg,
           })),
@@ -678,7 +694,7 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
     const p = apiRef.current
     if (!p) return
     // React SyntheticEvent -> native event로 상태머신에 전달
-    const evt = (e as any).nativeEvent ?? (e as any)
+    const evt = e.nativeEvent
     p.interactionSM = p.interactionSM.handleDrawStart(evt, p)
     p.mouseHasMoved = true
   }, [])
@@ -686,7 +702,7 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
   const handleDrawMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const p = apiRef.current
     if (!p) return
-    const evt = (e as any).nativeEvent ?? (e as any)
+    const evt = e.nativeEvent
     p.interactionSM = p.interactionSM.handleDrawMove(evt, p)
     p.mouseHasMoved = true
   }, [])
@@ -694,7 +710,7 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
   const handleDrawEnd = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     const p = apiRef.current
     if (!p) return
-    const evt = (e as any).nativeEvent ?? (e as any)
+    const evt = e.nativeEvent
     p.interactionSM = p.interactionSM.handleDrawEnd(evt, p)
     p.mouseHasMoved = true
   }, [])
@@ -780,7 +796,7 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
         p.canvasObserver.unobserve(containerRef.current)
       }
       if (prevInterfaceCanvasRef.current) {
-        prevInterfaceCanvasRef.current.removeEventListener('wheel', handleWheel as any)
+        prevInterfaceCanvasRef.current.removeEventListener('wheel', handleWheel)
       }
     }
   }, [handleWheel])
@@ -853,9 +869,9 @@ const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDra
 
         // wheel listener를 interface canvas에 직접 부착 (non-passive 옵션)
         if (prevInterfaceCanvasRef.current && prevInterfaceCanvasRef.current !== canvas) {
-          prevInterfaceCanvasRef.current.removeEventListener('wheel', handleWheel as any)
+          prevInterfaceCanvasRef.current.removeEventListener('wheel', handleWheel)
         }
-        canvas.addEventListener('wheel', handleWheel as any, makePassiveEventOption())
+        canvas.addEventListener('wheel', handleWheel, makePassiveEventOption())
         prevInterfaceCanvasRef.current = canvas
       }
     },

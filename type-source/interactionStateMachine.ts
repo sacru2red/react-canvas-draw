@@ -7,47 +7,7 @@ const SUPPRESS_SCROLL = function <T>(this: T, e: Event) {
   return this
 }
 
-// interface CanvasDraw {
-//   props: {
-//     disabled: boolean;
-//     enablePanAndZoom: boolean;
-//     mouseZoomFactor: number;
-//     brushColor: string;
-//     brushRadius: number;
-//   };
-//   coordSystem: {
-//     x: number;
-//     y: number;
-//     scale: number;
-//     scaleAtClientPoint: (scale: number, point: { clientX: number, clientY: number }) => void;
-//     setView: (view: { x: number, y: number }) => void;
-//     clientPointToViewPoint: (point: { clientX: number, clientY: number }) => { x: number, y: number };
-//   };
-//   lazy: {
-//     update: (point: { x: number, y: number }, options?: { both: boolean }) => void;
-//     isEnabled: () => boolean;
-//     brush: {
-//       toObject: () => { x: number, y: number };
-//     };
-//   };
-//   points: { x: number, y: number }[];
-//   clampPointToDocument: (point: { x: number, y: number }) => { x: number, y: number };
-//   drawPoints: (options: { points: { x: number, y: number }[], brushColor: string, brushRadius: number }) => void;
-//   saveLine: () => void;
-//   setView: (view: { x: number, y: number }) => void;
-// }
-
 export class DefaultState {
-  // handleMouseWheel = (e: WheelEvent, canvasDraw: CanvasDraw): DefaultState | DisabledState => {
-  //   const { disabled, enablePanAndZoom, mouseZoomFactor } = canvasDraw.props;
-  //   if (disabled) {
-  //     return new DisabledState();
-  //   } else if (enablePanAndZoom && e.ctrlKey) {
-  //     e.preventDefault();
-  //     canvasDraw.coordSystem.scaleAtClientPoint(mouseZoomFactor * e.deltaY, clientPointFromEvent(e));
-  //   }
-  //   return this;
-  // };
   handleMouseWheel(e: WheelEvent, canvasDraw: CanvasDrawApi): DisabledState | DefaultState {
     const { disabled, enablePanAndZoom, mouseZoomFactor } = canvasDraw.props
     if (disabled) {
@@ -240,7 +200,10 @@ export class WaitForPinchState {
     return this.issueDeferredPoints(canvasDraw)
   }
 
-  handleDrawEnd = (e: TouchEvent, canvasDraw: CanvasDrawApi): DefaultState | DisabledState => {
+  handleDrawEnd = (
+    e: MouseEvent | TouchEvent,
+    canvasDraw: CanvasDrawApi,
+  ): DefaultState | DisabledState => {
     return this.issueDeferredPoints(canvasDraw).handleDrawEnd(e, canvasDraw)
   }
 
@@ -282,7 +245,13 @@ export class ScaleOrPanState {
 
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
 
-  handleDrawStart = (e: TouchEvent, canvasDraw: CanvasDrawApi): ScaleOrPanState | DefaultState => {
+  handleDrawStart = (
+    e: MouseEvent | TouchEvent,
+    canvasDraw: CanvasDrawApi,
+  ): ScaleOrPanState | DefaultState => {
+    if (!(e instanceof TouchEvent)) {
+      return new DefaultState()
+    }
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
@@ -294,9 +263,12 @@ export class ScaleOrPanState {
   }
 
   handleDrawMove = (
-    e: TouchEvent,
+    e: MouseEvent | TouchEvent,
     canvasDraw: CanvasDrawApi,
   ): ScaleOrPanState | TouchPanState | TouchScaleState | DefaultState => {
+    if (!(e instanceof TouchEvent)) {
+      return new DefaultState()
+    }
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
@@ -322,15 +294,16 @@ export class ScaleOrPanState {
   handleDrawEnd = (): DefaultState => new DefaultState()
 
   getTouchMetrics = (
-    e: TouchEvent,
+    e: TouchEvent | MouseEvent,
   ): {
     t1: { clientX: number; clientY: number }
     t2: { clientX: number; clientY: number }
     distance: number
     centroid: { clientX: number; clientY: number }
   } => {
-    const { clientX: t1x, clientY: t1y } = clientPointFromEvent(e.touches[0])
-    const { clientX: t2x, clientY: t2y } = clientPointFromEvent(e.touches[1])
+    const touches = e instanceof TouchEvent ? e.touches : undefined
+    const { clientX: t1x, clientY: t1y } = clientPointFromEvent(touches?.[0])
+    const { clientX: t2x, clientY: t2y } = clientPointFromEvent(touches?.[1])
 
     const dx = t2x - t1x
     const dy = t2y - t1y
@@ -354,7 +327,13 @@ export class TouchPanState {
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
   handleDrawStart = (): TouchPanState => this
 
-  handleDrawMove = (e: TouchEvent, canvasDraw: CanvasDrawApi): TouchPanState | DefaultState => {
+  handleDrawMove = (
+    e: MouseEvent | TouchEvent,
+    canvasDraw: CanvasDrawApi,
+  ): TouchPanState | DefaultState => {
+    if (!(e instanceof TouchEvent)) {
+      return new DefaultState()
+    }
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
@@ -384,7 +363,13 @@ export class TouchScaleState {
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
   handleDrawStart = (): TouchScaleState => this
 
-  handleDrawMove = (e: TouchEvent, canvasDraw: CanvasDrawApi): TouchScaleState | DefaultState => {
+  handleDrawMove = (
+    e: MouseEvent | TouchEvent,
+    canvasDraw: CanvasDrawApi,
+  ): TouchScaleState | DefaultState => {
+    if (!(e instanceof TouchEvent)) {
+      return new DefaultState()
+    }
     e.preventDefault()
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
@@ -485,15 +470,15 @@ export class SyntheticEvent {
 }
 
 export function clientPointFromEvent(
-  e: WheelEvent | TouchEvent | MouseEvent | SyntheticEvent | TouchList | Touch,
+  e: WheelEvent | TouchEvent | MouseEvent | SyntheticEvent | TouchList | Touch | undefined,
 ) {
   let clientX = NaN
   let clientY = NaN
 
-  if ('clientX' in e) {
+  if (e && 'clientX' in e) {
     clientX = e.clientX
   }
-  if ('clientY' in e) {
+  if (e && 'clientY' in e) {
     clientY = e.clientY
   }
 
@@ -506,7 +491,7 @@ export function clientPointFromEvent(
 }
 
 export function viewPointFromEvent(
-  coordSystem: any,
+  coordSystem: CanvasDrawApi['coordSystem'],
   e: MouseEvent | TouchEvent | SyntheticEvent,
 ): { x: number; y: number } {
   return coordSystem.clientPointToViewPoint(clientPointFromEvent(e))
