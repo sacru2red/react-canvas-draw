@@ -87,33 +87,42 @@ export interface Line {
 
 export interface CanvasDrawProps {
   onChange?: (api: CanvasDrawApi) => void
-  loadTimeOffset: number
-  lazyRadius: number
-  brushRadius: number
-  brushColor: string
-  catenaryColor: string
-  gridColor: string
-  backgroundColor: string
-  hideGrid: boolean
-  canvasWidth: number
-  canvasHeight: number
-  disabled: boolean
-  imgSrc: string
-  saveData: string
-  immediateLoading: boolean
-  hideInterface: boolean
-  gridSizeX: number
-  gridSizeY: number
-  gridLineWidth: number
-  hideGridX: boolean
-  hideGridY: boolean
-  enablePanAndZoom: boolean
-  mouseZoomFactor: number
-  zoomExtents: Extents
-  clampLinesToDocument: boolean
+  loadTimeOffset?: number
+  lazyRadius?: number
+  brushRadius?: number
+  brushColor?: string
+  catenaryColor?: string
+  gridColor?: string
+  backgroundColor?: string
+  hideGrid?: boolean
+  canvasWidth?: number
+  canvasHeight?: number
+  disabled?: boolean
+  imgSrc?: string
+  saveData?: string
+  immediateLoading?: boolean
+  hideInterface?: boolean
+  gridSizeX?: number
+  gridSizeY?: number
+  gridLineWidth?: number
+  hideGridX?: boolean
+  hideGridY?: boolean
+  enablePanAndZoom?: boolean
+  mouseZoomFactor?: number
+  zoomExtents?: Extents
+  clampLinesToDocument?: boolean
   className?: string
   style?: React.CSSProperties
 }
+
+/**
+ * `CanvasDraw` 내부 로직에서 사용하는 "기본값이 모두 적용된" props 타입.
+ * (외부 입력용 `CanvasDrawProps`는 optional이지만, 내부에서는 항상 값이 존재해야 한다.)
+ */
+export type ResolvedCanvasDrawProps = Required<
+  Omit<CanvasDrawProps, 'onChange' | 'className' | 'style'>
+> &
+  Pick<CanvasDrawProps, 'onChange' | 'className' | 'style'>
 
 export type CanvasTypes = 'grid' | 'drawing' | 'temp' | 'interface'
 
@@ -132,7 +141,7 @@ export interface Size {
  * 클래스 컴포넌트에서 함수형 컴포넌트로 전환해도, 상태머신은 이 "API 계약"만을 의존한다.
  */
 export interface CanvasDrawApi {
-  props: CanvasDrawProps
+  props: ResolvedCanvasDrawProps
   coordSystem: CoordinateSystemApi
   lazy?: LazyBrushApi
 

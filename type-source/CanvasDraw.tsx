@@ -13,7 +13,14 @@ import {
   WaitForPinchState,
 } from './interactionStateMachine'
 import makePassiveEventOption from './makePassiveEventOption'
-import { CanvasDrawApi, CanvasDrawProps, CoordinateSystemView, Line, Point } from './types'
+import {
+  CanvasDrawApi,
+  CanvasDrawProps,
+  CoordinateSystemView,
+  Line,
+  Point,
+  ResolvedCanvasDrawProps,
+} from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -39,7 +46,7 @@ const canvasStyle: React.CSSProperties = {
 // The order of these is important: grid > drawing > temp > interface
 const canvasTypes = ['grid', 'drawing', 'temp', 'interface'] as const
 
-const DEFAULT_PROPS: CanvasDrawProps = {
+const DEFAULT_PROPS: ResolvedCanvasDrawProps = {
   onChange: undefined,
   loadTimeOffset: 5,
   lazyRadius: 12,
@@ -106,7 +113,7 @@ type CanvasDrawRuntime = CanvasDrawApi & {
 }
 
 const CanvasDraw = forwardRef<CanvasDrawApi, CanvasDrawProps>(function CanvasDraw(rawProps, ref) {
-  const props = { ...DEFAULT_PROPS, ...rawProps }
+  const props: ResolvedCanvasDrawProps = { ...DEFAULT_PROPS, ...rawProps }
   const apiRef = useRef<CanvasDrawRuntime | null>(null)
   if (!apiRef.current) {
     const coordSystem = new CoordinateSystem({
