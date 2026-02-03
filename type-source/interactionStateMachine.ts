@@ -7,6 +7,26 @@ const SUPPRESS_SCROLL = function <T>(this: T, e: Event) {
   return this
 }
 
+/**
+ * React는 `onTouchStart/onTouchMove`를 passive 리스너로 등록하는 경우가 많아서
+ * TouchEvent에서 `preventDefault()`를 호출하면 경고가 발생하고 동작도 무시된다.
+ *
+ * 터치에서의 기본 제스처 억제는(스크롤/핀치줌) Canvas 쪽 `touch-action`으로 처리한다.
+ */
+function preventDefaultUnlessTouch(e: Event | SyntheticEvent) {
+  const isTouch = typeof TouchEvent !== 'undefined' && e instanceof TouchEvent
+  if (isTouch) return
+
+  // cancelable이 명시돼 있고 false면 preventDefault는 의미가 없다.
+  if ('cancelable' in e && !e.cancelable) {
+    return
+  }
+
+  if ('preventDefault' in e && typeof e.preventDefault === 'function') {
+    e.preventDefault()
+  }
+}
+
 export class DefaultState {
   handleMouseWheel(e: WheelEvent, canvasDraw: CanvasDrawApi): DisabledState | DefaultState {
     const { disabled, enablePanAndZoom, mouseZoomFactor } = canvasDraw.props
@@ -19,7 +39,16 @@ export class DefaultState {
     return this
   }
 
-  handleDrawStart = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi) => {
+  handleDrawStart = (
+    e: MouseEvent | TouchEvent,
+    canvasDraw: CanvasDrawApi,
+  ):
+    | DisabledState
+    | PanState
+    | DefaultState
+    | DrawingState
+    | ScaleOrPanState
+    | WaitForPinchState => {
     if (canvasDraw.props.disabled) {
       return new DisabledState()
     } else if (e instanceof MouseEvent && e.ctrlKey && canvasDraw.props.enablePanAndZoom) {
@@ -112,7 +141,7 @@ export class PanState {
   handleMouseWheel = SUPPRESS_SCROLL.bind(this)
 
   handleDrawStart = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi): PanState => {
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
 
     this.dragStart = clientPointFromEvent(e)
     this.panStart = { x: canvasDraw.coordSystem.x, y: canvasDraw.coordSystem.y }
@@ -121,7 +150,7 @@ export class PanState {
   }
 
   handleDrawMove = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi): PanState => {
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
 
     const { clientX, clientY } = clientPointFromEvent(e)
     const dx = clientX - this.dragStart.clientX
@@ -152,7 +181,7 @@ export class WaitForPinchState {
     canvasDraw: CanvasDrawApi,
   ): DefaultState | DrawingState | ScaleOrPanState | WaitForPinchState => {
     const { enablePanAndZoom } = canvasDraw.props
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
 
     if (e instanceof TouchEvent) {
       if (enablePanAndZoom && e.touches && e.touches.length >= 2) {
@@ -172,7 +201,7 @@ export class WaitForPinchState {
     e: TouchEvent | MouseEvent,
     canvasDraw: CanvasDrawApi,
   ): DefaultState | WaitForPinchState | DrawingState | ScaleOrPanState => {
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
 
     if (e instanceof TouchEvent) {
       if (e.touches && e.touches.length >= 2) {
@@ -252,7 +281,7 @@ export class ScaleOrPanState {
     if (!(e instanceof TouchEvent)) {
       return new DefaultState()
     }
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
     }
@@ -269,7 +298,7 @@ export class ScaleOrPanState {
     if (!(e instanceof TouchEvent)) {
       return new DefaultState()
     }
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
     }
@@ -334,7 +363,7 @@ export class TouchPanState {
     if (!(e instanceof TouchEvent)) {
       return new DefaultState()
     }
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
     }
@@ -370,7 +399,7 @@ export class TouchScaleState {
     if (!(e instanceof TouchEvent)) {
       return new DefaultState()
     }
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
     if (!e.touches || e.touches.length < 2) {
       return new DefaultState()
     }
@@ -401,7 +430,7 @@ export class DrawingState {
     e: MouseEvent | TouchEvent | SyntheticEvent,
     canvasDraw: CanvasDrawApi,
   ): DrawingState => {
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
 
     if (e instanceof TouchEvent && e.touches.length) {
       const { x, y } = viewPointFromEvent(canvasDraw.coordSystem, e)
@@ -417,7 +446,7 @@ export class DrawingState {
     e: MouseEvent | TouchEvent | SyntheticEvent,
     canvasDraw: CanvasDrawApi,
   ): DrawingState => {
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
 
     const { x, y } = viewPointFromEvent(canvasDraw.coordSystem, e)
     if (canvasDraw.lazy) {
@@ -446,7 +475,7 @@ export class DrawingState {
   }
 
   handleDrawEnd = (e: MouseEvent | TouchEvent, canvasDraw: CanvasDrawApi): DefaultState => {
-    e.preventDefault()
+    preventDefaultUnlessTouch(e)
 
     this.handleDrawMove(e, canvasDraw)
     canvasDraw.saveLine()

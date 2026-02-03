@@ -41,6 +41,7 @@ function midPointBtw(p1: Point, p2: Point) {
 const canvasStyle: React.CSSProperties = {
   display: 'block',
   position: 'absolute',
+  touchAction: 'none',
 }
 
 // The order of these is important: grid > drawing > temp > interface
