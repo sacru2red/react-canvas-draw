@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const require = createRequire(import.meta.url)
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const pkg = require('./package.json') as {
   dependencies?: Record<string, string>
   peerDependencies?: Record<string, string>

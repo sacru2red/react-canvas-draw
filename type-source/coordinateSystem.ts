@@ -33,14 +33,6 @@ const NULL_BOUNDS = Object.freeze({
  */
 export const IDENTITY = Object.freeze({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 })
 
-function valueOrDefault(value: any, defaultValue: any) {
-  if (value === null || typeof value === 'undefined') {
-    return defaultValue
-  } else {
-    return value
-  }
-}
-
 /**
  * Facilitates calculation and manipulation of a zoom-and-pannable view within a
  * canvas.

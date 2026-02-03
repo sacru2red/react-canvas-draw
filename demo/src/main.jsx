@@ -31,7 +31,7 @@ class Demo extends Component {
     window.setInterval(() => {
       if (this.state.imgs && this.state.imgs.length && this.state.backgroundImg) {
         let img = ''
-        let imgs = this.state.imgs
+        const imgs = this.state.imgs
         for (let i = 0; i < imgs.length; i++) {
           if (this.state.backgroundImg !== imgs[i]) {
             img = imgs[i]

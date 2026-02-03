@@ -41,16 +41,16 @@ export default function drawImageProp({
   if (offsetX > 1) offsetX = 1
   if (offsetY > 1) offsetY = 1
 
-  var iw = img ? img.width : NaN,
-    ih = img ? img.height : NaN,
-    r = Math.min((w || NaN) / iw, (h || NaN) / ih),
-    nw = iw * r, // new prop. width
-    nh = ih * r, // new prop. height
-    cx,
-    cy,
-    cw,
-    ch,
-    ar = 1
+  const iw = img ? img.width : NaN
+  const ih = img ? img.height : NaN
+  const r = Math.min((w || NaN) / iw, (h || NaN) / ih)
+  let nw = iw * r // new prop. width
+  let nh = ih * r // new prop. height
+  let cx
+  let cy
+  let cw
+  let ch
+  let ar = 1
 
   // decide which gap to fill
   if (nw < w) ar = w / nw
