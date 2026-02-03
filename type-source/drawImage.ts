@@ -4,12 +4,16 @@
  * 
  * Note: img must be fully loaded or have correct width & height set.
  */
-export default function drawImageProp({ctx, img, x, y, w, h, offsetX, offsetY} = {}) {
+export default function drawImageProp({ctx, img, x, y, w, h, offsetX, offsetY}: {ctx?: CanvasRenderingContext2D, img?: HTMLImageElement | null, x?: number, y?: number, w?: number, h?: number, offsetX?: number, offsetY?: number}) {
   // Defaults
   if (typeof x !== "number") x = 0;
   if (typeof y !== "number") y = 0;
-  if (typeof w !== "number") w = ctx.canvas.width;
-  if (typeof h !== "number") h = ctx.canvas.height;
+  if (typeof w !== "number") {
+    w = ctx && ctx.canvas.width ? ctx.canvas.width : NaN;
+  }
+  if (typeof h !== "number") {
+    h = ctx && ctx.canvas.height ? ctx.canvas.height : NaN;
+  }
   if (typeof offsetX !== "number") offsetX = 0.5;
   if (typeof offsetY !== "number") offsetY = 0.5;
 
@@ -19,9 +23,9 @@ export default function drawImageProp({ctx, img, x, y, w, h, offsetX, offsetY} =
   if (offsetX > 1) offsetX = 1;
   if (offsetY > 1) offsetY = 1;
 
-  var iw = img.width,
-    ih = img.height,
-    r = Math.min(w / iw, h / ih),
+  var iw = img ? img.width : NaN,
+    ih = img ? img.height : NaN,
+    r = Math.min((w || NaN) / iw, (h || NaN) / ih),
     nw = iw * r, // new prop. width
     nh = ih * r, // new prop. height
     cx,
@@ -50,5 +54,8 @@ export default function drawImageProp({ctx, img, x, y, w, h, offsetX, offsetY} =
   if (ch > ih) ch = ih;
 
   // fill image in dest. rectangle
-  ctx.drawImage(img, cx, cy, cw, ch, x, y, w, h);
+  if (ctx) {
+    // @ts-ignore
+    ctx.drawImage(img, cx, cy, cw, ch, x, y, w, h);
+  }
 }
