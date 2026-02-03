@@ -48,7 +48,7 @@
     "@types/react": "^18.3.4",
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.18",
-    "all-contributors-cli": "^6.15.0",
+    "all-contributors-cli": "^6.26.1",
     "gh-pages": "^6.3.0",
     "husky": "^9.1.7",
     "jsdom": "^24.0.0",
