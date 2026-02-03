@@ -263,6 +263,7 @@ export class ScaleOrPanState {
     distance: number
     centroid: { clientX: number; clientY: number }
   }
+
   panStart: { x: number; y: number }
   scaleStart: number
   recentMetrics: { centroid: { clientX: number; clientY: number }; distance: number }

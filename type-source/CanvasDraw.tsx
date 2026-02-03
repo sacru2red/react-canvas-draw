@@ -46,9 +46,11 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
   ctx: {
     [key in CanvasTypes]?: CanvasRenderingContext2D
   }
+
   canvas: {
     [key in CanvasTypes]?: HTMLCanvasElement | null
   }
+
   points: Point[] = []
   mouseHasMoved: boolean
   valuesChanged: boolean
@@ -63,6 +65,7 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     | DrawingState
     | ScaleOrPanState
     | TouchPanState
+
   // catenary: Catenary;
   lazy?: LazyBrush
   chainLength?: number
@@ -126,7 +129,7 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     clampLinesToDocument: false,
   }
 
-  ///// public API /////////////////////////////////////////////////////////////
+  /// // public API /////////////////////////////////////////////////////////////
 
   constructor(props: CanvasDrawProps) {
     super(props)
@@ -159,7 +162,7 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     if (this.lines.length) {
       lines = this.lines.slice(0, -1)
     } else if (this.erasedLines.length) {
-      let poped = this.erasedLines.pop()
+      const poped = this.erasedLines.pop()
       lines = poped ? [poped] : undefined
     }
     this.clearExceptErasedLines()
@@ -210,27 +213,27 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
    */
   getDataURL = (fileType: string, useBgImage: boolean, backgroundColour: string) => {
     // Get a reference to the "drawing" layer of the canvas
-    let canvasToExport = this.canvas.drawing
+    const canvasToExport = this.canvas.drawing
     if (!canvasToExport) {
       return 'Canvas not found'
     }
 
-    let context = canvasToExport.getContext('2d')
+    const context = canvasToExport.getContext('2d')
     if (!context) {
       return 'Canvas context not found'
     }
 
-    //cache height and width
-    let width = canvasToExport.width
-    let height = canvasToExport.height
+    // cache height and width
+    const width = canvasToExport.width
+    const height = canvasToExport.height
 
-    //get the current ImageData for the canvas
-    let storedImageData = context.getImageData(0, 0, width, height)
+    // get the current ImageData for the canvas
+    const storedImageData = context.getImageData(0, 0, width, height)
 
-    //store the current globalCompositeOperation
-    var compositeOperation = context.globalCompositeOperation
+    // store the current globalCompositeOperation
+    const compositeOperation = context.globalCompositeOperation
 
-    //set to draw behind current content
+    // set to draw behind current content
     context.globalCompositeOperation = 'destination-over'
 
     // If "useBgImage" has been set to true, this takes precedence over the background colour parameter
@@ -240,10 +243,10 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
       // Write the background image
       this.drawImage()
     } else if (backgroundColour != null) {
-      //set background color
+      // set background color
       context.fillStyle = backgroundColour
 
-      //fill entire canvas with background colour
+      // fill entire canvas with background colour
       context.fillRect(0, 0, width, height)
     }
 
@@ -251,15 +254,15 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     if (!fileType) fileType = 'png'
 
     // Export the canvas to data URL
-    let imageData = canvasToExport.toDataURL(`image/${fileType}`)
+    const imageData = canvasToExport.toDataURL(`image/${fileType}`)
 
-    //clear the canvas
+    // clear the canvas
     context.clearRect(0, 0, width, height)
 
-    //restore it with original / cached ImageData
+    // restore it with original / cached ImageData
     context.putImageData(storedImageData, 0, 0)
 
-    //reset the globalCompositeOperation to what it was
+    // reset the globalCompositeOperation to what it was
     context.globalCompositeOperation = compositeOperation
 
     return imageData
@@ -303,9 +306,9 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     }
   }
 
-  ///// private API ////////////////////////////////////////////////////////////
+  /// // private API ////////////////////////////////////////////////////////////
 
-  ///// React Lifecycle
+  /// // React Lifecycle
 
   componentDidMount() {
     this.lazy = new LazyBrush({
@@ -442,7 +445,7 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     )
   }
 
-  ///// Event Handlers
+  /// // Event Handlers
 
   handleWheel = (e: React.WheelEvent) => {
     // @ts-ignore
@@ -525,7 +528,7 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     }
   }
 
-  ///// Helpers
+  /// // Helpers
 
   clampPointToDocument = (point: Point) => {
     if (this.props.clampLinesToDocument) {
@@ -552,7 +555,7 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     // Simulate live-drawing of the loaded lines
     // TODO use a generator
     let curTime = 0
-    let timeoutGap = immediate ? 0 : this.props.loadTimeOffset
+    const timeoutGap = immediate ? 0 : this.props.loadTimeOffset
 
     if (!lines) {
       return
@@ -632,10 +635,10 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
       this.ctx.temp.beginPath()
     }
 
-    for (var i = 1, len = points.length; i < len; i++) {
+    for (let i = 1, len = points.length; i < len; i++) {
       // we pick the point between pi+1 & pi+2 as the
       // end point and p1 as our control point
-      var midPoint = midPointBtw(p1, p2)
+      const midPoint = midPointBtw(p1, p2)
       if (this.ctx.temp) {
         this.ctx.temp.quadraticCurveTo(p1.x, p1.y, midPoint.x, midPoint.y)
       }
@@ -744,7 +747,7 @@ export default class CanvasDraw extends PureComponent<CanvasDrawProps> {
     }
   }
 
-  ///// Canvas Rendering
+  /// // Canvas Rendering
 
   drawImage = () => {
     if (!this.props.imgSrc) return
